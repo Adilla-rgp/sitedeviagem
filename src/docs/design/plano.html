@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Plano e concessões</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0D12}
+a{color:#C4B5FD}a:hover{color:#DDD6FE}
+input[type=range]{accent-color:#A78BFA}
+</style>
+</helmet>
+<div style="box-sizing: border-box; min-height: 940px; background: #0E0D12; color: #EDEBF2; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+  <header style="border-bottom: 1px solid #2A2733">
+    <div style="max-width: 1280px; margin: 0 auto; box-sizing: border-box; padding: 16px 32px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.08em">[NOME]</span>
+      <nav aria-label="Etapas da viagem" style="display: flex; gap: 4px; font-size: 14px">
+        <a href="#" style="padding: 10px 14px; border-radius: 8px; color: #A19DAD; text-decoration: none">Respostas</a>
+        <a href="mapa.html" style="padding: 10px 14px; border-radius: 8px; color: #A19DAD; text-decoration: none">Tensões</a>
+        <a href="#" aria-current="page" style="padding: 10px 14px; border-radius: 8px; background: #17151E; color: #EDEBF2; text-decoration: none">Planos</a>
+      </nav>
+    </div>
+  </header>
+  <main style="max-width: 1280px; margin: 0 auto; box-sizing: border-box; padding: 28px 32px 40px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+    <section aria-labelledby="plano-titulo" style="flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <nav aria-label="Trilha" style="font-size: 13px; color: #A19DAD"><a href="#" style="color: #A19DAD">Viagens</a> / Viagem de julho / Rodada 1</nav>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; color: #C4B5FD; margin-top: 8px">PLANO RECOMENDADO</span>
+        <h1 id="plano-titulo" style="margin: 0; font-size: 32px; font-weight: 600; letter-spacing: -0.015em">{{top.dest}}</h1>
+        <p style="margin: 0; font-size: 15px; color: #A19DAD">{{top.dates}} · {{top.cost}} por pessoa, estimado</p>
+      </div>
+
+      <div style="background: #131119; border: 1px solid #2A2733; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 600">Satisfação por participante</h2>
+          <span style="font-size: 12px; color: #A19DAD">0 a 100 · média {{top.meanTxt}} · pior {{top.minTxt}}</span>
+        </div>
+        <sc-for list="{{top.rows}}" as="r" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 72px minmax(0, 1fr) 40px; gap: 12px; align-items: center">
+            <span style="font-size: 14px">{{r.n}}</span>
+            <div style="height: 10px; background: #2A2733; border-radius: 5px; display: flex">
+              <div style="{{r.barStyle}}"></div>
+            </div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; text-align: right">{{r.v}}</span>
+          </div>
+        </sc-for>
+        <p style="margin: 0; font-size: 12px; color: #F5B454">Destacado: o participante com menor satisfação, que o critério de equilíbrio protege.</p>
+      </div>
+
+      <div style="background: #17151E; border: 1px solid #2A2733; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Justificativa</h2>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px">
+          <sc-for list="{{top.rows}}" as="r" hint-placeholder-count="4">
+            <li style="display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; font-size: 14px; line-height: 1.45">
+              <span style="font-weight: 500">{{r.n}}</span>
+              <span style="color: #D6D3DE">{{r.why}}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <p style="margin: 0; font-size: 12px; color: #A19DAD">Justificativa gerada por regras a partir do cálculo. 3 alternativas avaliadas · 0 limites violados.</p>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 10px">
+        <button style="flex: 1 1 160px; height: 48px; border: none; border-radius: 8px; background: #A78BFA; color: #0E0D12; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer">Aceito</button>
+        <button style="flex: 1 1 160px; height: 48px; border: 1px solid #3A3645; border-radius: 8px; background: none; color: #EDEBF2; font-family: inherit; font-size: 15px; cursor: pointer">Aceito com ressalva</button>
+        <button style="flex: 1 1 160px; height: 48px; border: 1px solid #3A3645; border-radius: 8px; background: none; color: #EDEBF2; font-family: inherit; font-size: 15px; cursor: pointer">Recuso</button>
+      </div>
+    </section>
+
+    <aside style="flex: 1 1 340px; display: flex; flex-direction: column; gap: 16px">
+      <section style="background: #17151E; border: 1px solid #2A2733; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <label for="alpha" style="font-size: 15px; font-weight: 600">Critério de equilíbrio</label>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px">α = {{alphaTxt}}</span>
+        </div>
+        <input id="alpha" type="range" min="0" max="10" step="1" value="{{alphaStep}}" onChange="{{setAlpha}}" style="width: 100%; height: 32px">
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #A19DAD">
+          <span>média do grupo</span>
+          <span>menos atendido</span>
+        </div>
+        <p style="margin: 0; font-size: 13px; color: #D6D3DE">{{modeTxt}}</p>
+        <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #A19DAD">score = (1 − α) · média + α · pior</p>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 600">Alternativas avaliadas</h2>
+        <sc-for list="{{ranked}}" as="p" hint-placeholder-count="3">
+          <div style="{{p.cardStyle}}">
+            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: baseline">
+              <span style="font-size: 14px; font-weight: 600">{{p.rankTxt}} {{p.dest}}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px">{{p.scoreTxt}}</span>
+            </div>
+            <span style="font-size: 13px; color: #A19DAD">{{p.dates}} · {{p.cost}}</span>
+            <span style="font-size: 12px; color: #A19DAD">média {{p.meanTxt}} · pior {{p.minTxt}} ({{p.worst}})</span>
+          </div>
+        </sc-for>
+      </section>
+    </aside>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":940}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { alphaStep: 5 };
+  }
+  renderVals() {
+    var a = this.state.alphaStep / 10;
+    var plans = [
+      { dest: 'Lençóis Maranhenses', dates: '12 a 18 de julho', cost: 'R$ 1.050', people: [
+        { n: 'Ana', s: 0.84, why: 'Ganhou o destino que indicou primeiro.' },
+        { n: 'Bruno', s: 0.80, why: 'Ganhou praia e as datas que pediu.' },
+        { n: 'Carla', s: 0.62, why: 'Cedeu na serra; em troca, ritmo tranquilo garantido.' },
+        { n: 'Eva', s: 0.82, why: 'Dentro do orçamento: R$ 1.050 de R$ 1.100.' } ] },
+      { dest: 'Jericoacoara', dates: '10 a 16 de julho', cost: 'R$ 1.090', people: [
+        { n: 'Ana', s: 0.88, why: 'Ganhou praia; cedeu um pouco no ritmo.' },
+        { n: 'Bruno', s: 0.94, why: 'Ganhou o destino favorito e o ritmo agitado.' },
+        { n: 'Carla', s: 0.50, why: 'Cedeu na serra e no ritmo tranquilo.' },
+        { n: 'Eva', s: 0.78, why: 'Dentro do orçamento, mas no limite: R$ 1.090 de R$ 1.100.' } ] },
+      { dest: 'Lençóis Maranhenses, roteiro curto', dates: '14 a 18 de julho', cost: 'R$ 820', people: [
+        { n: 'Ana', s: 0.70, why: 'Cedeu 2 dias de viagem.' },
+        { n: 'Bruno', s: 0.66, why: 'Cedeu 2 dias e as datas que queria.' },
+        { n: 'Carla', s: 0.66, why: 'Cedeu na serra; roteiro curto e tranquilo.' },
+        { n: 'Eva', s: 0.86, why: 'Sobra folga no orçamento: R$ 820 de R$ 1.100.' } ] }
+    ];
+    var scored = plans.map(function (p) {
+      var sum = 0, min = 1, worst = '';
+      p.people.forEach(function (x) { sum += x.s; if (x.s < min) { min = x.s; worst = x.n; } });
+      var mean = sum / p.people.length;
+      var score = (1 - a) * mean + a * min;
+      return { dest: p.dest, dates: p.dates, cost: p.cost, people: p.people, mean: mean, min: min, worst: worst, score: score };
+    });
+    scored.sort(function (x, y) { return y.score - x.score; });
+    var top = scored[0];
+    var ranked = scored.map(function (p, i) {
+      return {
+        dest: p.dest, dates: p.dates, cost: p.cost, worst: p.worst,
+        rankTxt: (i + 1) + 'º',
+        scoreTxt: String(Math.round(p.score * 100)),
+        meanTxt: String(Math.round(p.mean * 100)),
+        minTxt: String(Math.round(p.min * 100)),
+        cardStyle: 'display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 8px; background: ' + (i === 0 ? '#1E1A2B' : '#131119') + '; border: ' + (i === 0 ? '1px solid #A78BFA' : '1px solid #2A2733')
+      };
+    });
+    var rows = top.people.map(function (x) {
+      var isWorst = x.n === top.worst;
+      return {
+        n: x.n, why: x.why, v: String(Math.round(x.s * 100)),
+        barStyle: 'width: ' + Math.round(x.s * 100) + '%; border-radius: 5px; background: ' + (isWorst ? '#F5B454' : '#A78BFA')
+      };
+    });
+    var mode = a <= 0.2 ? 'Prioriza a média do grupo: um participante pode ficar muito abaixo dos demais.'
+      : a >= 0.8 ? 'Prioriza o participante menos atendido, com pequena perda na média.'
+      : 'Equilibrado: boa média sem concessões desproporcionais.';
+    var self = this;
+    return {
+      top: { dest: top.dest, dates: top.dates, cost: top.cost, rows: rows, meanTxt: String(Math.round(top.mean * 100)), minTxt: String(Math.round(top.min * 100)) },
+      ranked: ranked,
+      alphaStep: this.state.alphaStep,
+      alphaTxt: a.toFixed(1).replace('.', ','),
+      modeTxt: mode,
+      setAlpha: function (e) { self.setState({ alphaStep: Number(e.target.value) }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

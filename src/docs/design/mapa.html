@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Mapa de tensões do grupo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0D12}
+a{color:#C4B5FD}a:hover{color:#DDD6FE}
+</style>
+</helmet>
+<div style="box-sizing: border-box; min-height: 820px; background: #0E0D12; color: #EDEBF2; font-family: 'IBM Plex Sans', system-ui, sans-serif">
+  <header style="border-bottom: 1px solid #2A2733">
+    <div style="max-width: 1280px; margin: 0 auto; box-sizing: border-box; padding: 16px 32px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.08em">[NOME]</span>
+      <nav aria-label="Etapas da viagem" style="display: flex; gap: 4px; font-size: 14px">
+        <a href="#" style="padding: 10px 14px; border-radius: 8px; color: #A19DAD; text-decoration: none">Respostas</a>
+        <a href="#" aria-current="page" style="padding: 10px 14px; border-radius: 8px; background: #17151E; color: #EDEBF2; text-decoration: none">Tensões</a>
+        <a href="plano.html" style="padding: 10px 14px; border-radius: 8px; color: #A19DAD; text-decoration: none">Planos</a>
+      </nav>
+    </div>
+  </header>
+  <main style="max-width: 1280px; margin: 0 auto; box-sizing: border-box; padding: 28px 32px 40px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+    <aside style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <nav aria-label="Trilha" style="font-size: 13px; color: #A19DAD"><a href="#" style="color: #A19DAD">Viagens</a> / Viagem de julho</nav>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.01em">Viagem de julho</h1>
+        <p style="margin: 0; font-size: 13px; color: #A19DAD">Janela de 5 a 26 de julho · 4 destinos candidatos</p>
+      </div>
+      <section style="display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 500; color: #A19DAD">4 de 5 responderam</h2>
+        <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px">
+          <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #211F29"><span>Ana <span style="color: #A19DAD">· você</span></span><span style="color: #A19DAD">respondeu</span></li>
+          <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #211F29"><span>Bruno</span><span style="color: #A19DAD">respondeu</span></li>
+          <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #211F29"><span>Carla</span><span style="color: #A19DAD">respondeu</span></li>
+          <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #211F29"><span>Eva</span><span style="color: #A19DAD">respondeu</span></li>
+          <li style="display: flex; justify-content: space-between; padding: 8px 0"><span>Diego</span><span style="color: #F5B454">aguardando</span></li>
+        </ul>
+      </section>
+      <button style="height: 44px; border: 1px solid #3A3645; border-radius: 8px; background: none; color: #EDEBF2; font-family: inherit; font-size: 14px; cursor: pointer">Copiar link do convite</button>
+    </aside>
+
+    <section aria-labelledby="mapa-titulo" style="flex: 999 1 560px; min-width: 0; background: #131119; border: 1px solid #2A2733; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline">
+        <h2 id="mapa-titulo" style="margin: 0; font-size: 16px; font-weight: 600">Compatibilidade entre participantes</h2>
+        <span style="font-size: 12px; color: #A19DAD">Atualizado a cada nova resposta</span>
+      </div>
+      <div style="overflow-x: auto">
+        <div role="img" aria-label="Mapa do grupo: Eva está em conflito com Bruno por orçamento e com Carla por clima; os demais pares são compatíveis; Diego ainda não respondeu" style="position: relative; width: 600px; height: 470px; margin: 0 auto">
+          <div style="position: absolute; left: 300px; top: 59px; width: 211px; height: 2px; background: #4A4560; transform: rotate(35.9deg); transform-origin: 0 50%"></div>
+          <div style="position: absolute; left: 471px; top: 183px; width: 212px; height: 2px; background: #4A4560; transform: rotate(107.8deg); transform-origin: 0 50%"></div>
+          <div style="position: absolute; left: 300px; top: 59px; width: 211px; height: 2px; background: #4A4560; transform: rotate(144.1deg); transform-origin: 0 50%"></div>
+          <div style="position: absolute; left: 300px; top: 59px; width: 343px; height: 2px; background: #4A4560; transform: rotate(72deg); transform-origin: 0 50%"></div>
+          <div style="position: absolute; left: 129px; top: 183px; width: 342px; height: 0; border-top: 2px dashed #F5B454; transform: rotate(0deg); transform-origin: 0 50%"></div>
+          <div style="position: absolute; left: 129px; top: 183px; width: 343px; height: 0; border-top: 2px dashed #F5B454; transform: rotate(36.1deg); transform-origin: 0 50%"></div>
+
+          <span style="position: absolute; left: 258px; top: 168px; background: #2A2215; border: 1px solid #6B5427; color: #F5B454; font-size: 12px; padding: 3px 8px; border-radius: 999px">orçamento</span>
+          <span style="position: absolute; left: 236px; top: 270px; background: #2A2215; border: 1px solid #6B5427; color: #F5B454; font-size: 12px; padding: 3px 8px; border-radius: 999px">clima</span>
+
+          <div style="position: absolute; left: 268px; top: 28px; width: 64px; height: 64px; border-radius: 50%; background: #1E1A2B; border: 2px solid #6E6886; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 20px">A</div>
+          <span style="position: absolute; left: 340px; top: 48px; font-size: 13px">Ana</span>
+          <div style="position: absolute; left: 439px; top: 152px; width: 64px; height: 64px; border-radius: 50%; background: #1E1A2B; border: 2px solid #6E6886; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 20px">B</div>
+          <span style="position: absolute; left: 511px; top: 172px; font-size: 13px">Bruno</span>
+          <div style="position: absolute; left: 374px; top: 354px; width: 64px; height: 64px; border-radius: 50%; background: #1E1A2B; border: 2px solid #6E6886; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 20px">C</div>
+          <span style="position: absolute; left: 446px; top: 374px; font-size: 13px">Carla</span>
+          <div style="position: absolute; left: 97px; top: 152px; width: 64px; height: 64px; border-radius: 50%; background: #2A2215; border: 2px solid #F5B454; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 20px">E</div>
+          <span style="position: absolute; left: 60px; top: 222px; font-size: 13px">Eva <span style="color: #F5B454">· mais limites</span></span>
+          <div style="position: absolute; left: 162px; top: 354px; width: 64px; height: 64px; border-radius: 50%; border: 2px dashed #4A4555; color: #A19DAD; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 20px">D</div>
+          <span style="position: absolute; left: 136px; top: 426px; font-size: 13px; color: #A19DAD">Diego · aguardando</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; font-size: 12px; color: #A19DAD">
+        <span style="display: flex; align-items: center; gap: 8px"><span style="width: 24px; height: 2px; background: #4A4560"></span>compatíveis</span>
+        <span style="display: flex; align-items: center; gap: 8px"><span style="width: 24px; height: 0; border-top: 2px dashed #F5B454"></span>conflito, com o critério</span>
+        <span style="display: flex; align-items: center; gap: 8px"><span style="width: 12px; height: 12px; border-radius: 50%; border: 2px dashed #4A4555"></span>ainda não respondeu</span>
+      </div>
+    </section>
+
+    <aside style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 16px">
+      <section style="background: #17151E; border: 1px solid #2A2733; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 600">Principais restrições</h2>
+        <ol style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 1.45">
+          <li>O limite de orçamento da Eva elimina Paraty.</li>
+          <li>O limite de clima da Eva elimina a Chapada, preferida da Carla.</li>
+          <li>A janela comum de datas é de 10 a 18 de julho.</li>
+        </ol>
+      </section>
+      <section style="background: #17151E; border: 1px solid #2A2733; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 600">Viabilidade por destino</h2>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; font-size: 14px"><span>Lençóis Maranhenses <span style="color: #A19DAD">· MA</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px">4 de 4</span></div>
+          <div style="height: 6px; background: #2A2733; border-radius: 3px; display: flex"><div style="width: 100%; background: #A78BFA; border-radius: 3px"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; font-size: 14px"><span>Jericoacoara <span style="color: #A19DAD">· CE</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px">4 de 4</span></div>
+          <div style="height: 6px; background: #2A2733; border-radius: 3px; display: flex"><div style="width: 100%; background: #A78BFA; border-radius: 3px"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; font-size: 14px"><span>Chapada Diamantina <span style="color: #A19DAD">· BA</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px">3 de 4</span></div>
+          <div style="height: 6px; background: #2A2733; border-radius: 3px; display: flex"><div style="width: 75%; background: #A78BFA; border-radius: 3px"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; justify-content: space-between; font-size: 14px"><span>Paraty <span style="color: #A19DAD">· RJ</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px">3 de 4</span></div>
+          <div style="height: 6px; background: #2A2733; border-radius: 3px; display: flex"><div style="width: 75%; background: #A78BFA; border-radius: 3px"></div></div>
+        </div>
+      </section>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <a href="plano.html" style="display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 8px; background: #A78BFA; color: #0E0D12; font-size: 15px; font-weight: 600; text-decoration: none">Gerar planos com 4 respostas</a>
+        <button style="height: 44px; border: 1px solid #3A3645; border-radius: 8px; background: none; color: #EDEBF2; font-family: inherit; font-size: 14px; cursor: pointer">Enviar lembrete ao Diego</button>
+      </div>
+    </aside>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
