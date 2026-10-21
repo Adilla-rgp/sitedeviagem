@@ -7,15 +7,18 @@ import type {
   Destination,
   Invite,
   Member,
+  MemberLimit,
+  ParsedConstraints,
   Plan,
   PlanRound,
+  PlanRoundRecord,
   Reaction,
   Trip,
   TripDetail,
   TripTensions,
 } from '../types/api'
+import { findEngineRound, memberLimitsFor, toEngineInput } from '../mocks/engine-fixture'
 import { db, nextId, persistDb } from '../mocks/store'
-import { ENGINE_ALPHA, roundOnePlans } from '../mocks/plans'
 import { computeTensions } from '../mocks/tensions'
 import { sampleInterpretation } from '../mocks/trip-july'
 
@@ -26,6 +29,7 @@ import { sampleInterpretation } from '../mocks/trip-july'
 const MOCK_LATENCY_MS = 700
 const MIN_RAW_TEXT_LENGTH = 10
 const MIN_REACTION_COMMENT_LENGTH = 3
+const DEFAULT_NIGHTS = 6
 
 export class ApiError extends Error {
   readonly status: number
@@ -85,22 +89,27 @@ function latestConstraints(memberId: string): Constraints | null {
 }
 
 function latestRound(tripId: string): number | null {
-  const rounds = db.plans.filter((plan) => plan.trip_id === tripId).map((plan) => plan.round)
+  const rounds = db.planRounds.filter((record) => record.trip_id === tripId).map((record) => record.round)
   return rounds.length > 0 ? Math.max(...rounds) : null
+}
+
+/** O que os limites desta pessoa eliminam, para a tela dela. */
+function ownLimits(hard: { id: string }[]): MemberLimit[] {
+  return memberLimitsFor(hard.map((item) => item.id))
 }
 
 function buildRound(tripId: string, round: number): PlanRound {
   findTrip(tripId)
+  const record = db.planRounds.find((item) => item.trip_id === tripId && item.round === round)
+  if (!record) throw new ApiError(404, 'Rodada não encontrada.')
   const plans = db.plans
     .filter((plan) => plan.trip_id === tripId && plan.round === round)
     .sort((a, b) => b.score - a.score)
-  if (plans.length === 0) throw new ApiError(404, 'Rodada não encontrada.')
   const planIds = plans.map((plan) => plan.id)
   return {
-    trip_id: tripId,
-    round,
+    ...record,
     plans,
-    recommended_plan_id: plans[0].id,
+    recommended_plan_id: plans[0]?.id ?? null,
     reactions: db.reactions.filter((reaction) => planIds.includes(reaction.plan_id)),
   }
 }
@@ -129,6 +138,7 @@ export function createTrip(input: CreateTripInput): Promise<Trip> {
       organizer_id: 'user-ana',
       date_window_start: input.date_window_start,
       date_window_end: input.date_window_end,
+      nights: input.nights ?? DEFAULT_NIGHTS,
       alpha: input.alpha ?? 0.5,
       status: 'collecting',
       created_at: now(),
@@ -175,6 +185,7 @@ export function getInvite(token: string): Promise<Invite> {
     const trip = findTrip(member.trip_id)
     const tripMembers = db.members.filter((item) => item.trip_id === trip.id)
     const organizer = tripMembers.find((item) => item.is_organizer)
+    const constraints = latestConstraints(member.id)
     return {
       trip,
       member,
@@ -187,21 +198,23 @@ export function getInvite(token: string): Promise<Invite> {
         responded_at,
       })),
       destinations: tripDestinations(trip.id),
-      constraints: latestConstraints(member.id),
+      constraints,
+      member_limits: constraints ? ownLimits(constraints.hard) : [],
       latest_round: latestRound(trip.id),
     }
   })
 }
 
 /** POST /invite/{token}/constraints/parse — interpreta o texto livre, não salva. */
-export function parseConstraints(token: string, rawText: string): Promise<ConstraintsInput> {
+export function parseConstraints(token: string, rawText: string): Promise<ParsedConstraints> {
   return respond(() => {
-    findMemberByToken(token)
+    const member = findMemberByToken(token)
     const text = rawText.trim()
     if (text.length < MIN_RAW_TEXT_LENGTH) {
       throw new ApiError(422, 'Escreva um pouco mais sobre suas condições para que possamos interpretar.')
     }
-    return sampleInterpretation(text)
+    const interpretation = sampleInterpretation(member.id, text)
+    return { ...interpretation, member_limits: ownLimits(interpretation.hard) }
   })
 }
 
@@ -240,27 +253,42 @@ export function getTripTensions(tripId: string): Promise<TripTensions> {
 
 /**
  * POST /trips/{id}/plans — roda o motor e gera uma nova rodada.
- * O front não tem motor: o mock devolve sempre as alternativas da rodada 1 da
- * referência visual, com o número da rodada seguinte.
+ * O front não tem motor: o mock usa a rodada de fixtures/july-trip.json que foi
+ * calculada exatamente com as respostas salvas. Se a combinação não foi
+ * exportada, avisa em vez de mostrar números que não correspondem às respostas.
  */
 export function generatePlans(tripId: string): Promise<PlanRound> {
   return respond(() => {
     const trip = findTrip(tripId)
-    const responded = db.members.filter((member) => member.trip_id === tripId && member.responded_at).length
-    if (responded < 2) throw new ApiError(422, 'São necessárias pelo menos 2 respostas para gerar planos.')
+    const respondents = db.members.filter((member) => member.trip_id === tripId && member.responded_at)
+    if (respondents.length < 2) throw new ApiError(422, 'São necessárias pelo menos 2 respostas para gerar planos.')
+
+    const responses = respondents.flatMap((member) => {
+      const record = latestConstraints(member.id)
+      return record ? [toEngineInput(record)] : []
+    })
+    const engine = findEngineRound(responses)
+    if (!engine) {
+      throw new ApiError(
+        422,
+        'Os dados de exemplo não têm um cálculo para esta combinação de respostas. Reinicie a demonstração ou use as respostas sugeridas.',
+      )
+    }
 
     const round = (latestRound(tripId) ?? 0) + 1
-    const plans = roundOnePlans.map<Plan>((seed) => ({
-      ...seed,
-      id: nextId('plan'),
+    const record: PlanRoundRecord = {
       trip_id: tripId,
       round,
-      alpha: ENGINE_ALPHA,
-      alternatives_evaluated: roundOnePlans.length,
-      violated_limits: 0,
-    }))
-    db.plans.push(...plans)
-    trip.status = 'planned'
+      alpha: engine.alpha,
+      alternatives_evaluated: engine.alternatives_evaluated,
+      excluded_destinations: engine.excluded_destinations,
+      blocking_limits: engine.blocking_limits,
+      created_at: now(),
+    }
+    const plans = engine.plans.map<Plan>((seed) => ({ ...seed, id: nextId('plan'), trip_id: tripId, round }))
+    db.planRounds.push(structuredClone(record))
+    db.plans.push(...structuredClone(plans))
+    trip.status = plans.length > 0 ? 'planned' : 'collecting'
     return buildRound(tripId, round)
   })
 }

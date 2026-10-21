@@ -29,7 +29,7 @@ O projeto nasceu do plann.er do NLW Journey (Rocketseat). A interface antiga já
 - Componentes nunca contêm dados fixos de negócio: tudo passa por `src/lib/api.ts`.
 - Tipos do contrato em `src/types/api.ts`, espelhando os modelos da especificação.
 - Dados de exemplo em `src/mocks/`, coerentes entre si (mesmo grupo, mesmos números em todas as telas).
-- O front não implementa o motor: os planos e scores vêm prontos da API (hoje, de `src/mocks/plans.ts`). A única pontuação no front é a simulação do critério de equilíbrio em `src/lib/scoring.ts`, que reordena as alternativas quando o organizador mexe no α; ela espelha a fórmula da especificação e não muda o plano recomendado.
+- O front não implementa o motor: os planos e scores vêm prontos da API (hoje, de `src/mocks/fixtures/july-trip.json`, gerado pelo motor; veja `src/mocks/README.md`). A única pontuação no front é a simulação do critério de equilíbrio em `src/lib/scoring.ts`, que reordena as alternativas quando o organizador mexe no α; ela espelha a fórmula da especificação e não muda o plano recomendado.
 - Modo demonstração: enquanto os dados vêm dos mocks, `src/config/demo.ts` liga a faixa "Demonstração com dados de exemplo" em todas as telas e o roteiro da página inicial. Os atalhos e o reinício dos dados ficam em `src/lib/demo.ts`. Desligue quando a API real estiver no ar.
 - Os dados de exemplo ficam salvos no `localStorage` (`src/mocks/store.ts`). Ao mudar o formato dos dados, suba a versão da chave de armazenamento.
 - O orçamento de cada pessoa é confidencial: nenhuma tela ou justificativa mostra o valor para o grupo.

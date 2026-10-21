@@ -1,4 +1,5 @@
 import type { Constraints, ConstraintsInput, Member, Trip } from '../types/api'
+import { dateRangeSummary, destinationPreferenceSummary } from './summaries'
 
 // "Viagem de julho": o grupo usado em todas as telas. Ana organiza; Ana, Bruno e
 // Carla já responderam. Eva responde pela tela do convidado (a interpretação
@@ -12,6 +13,7 @@ export const trip: Trip = {
   organizer_id: 'user-ana',
   date_window_start: '2027-07-05',
   date_window_end: '2027-07-26',
+  nights: 6,
   alpha: 0.5,
   status: 'collecting',
   created_at: '2026-10-12T14:30:00Z',
@@ -74,7 +76,7 @@ export const constraints: Constraints[] = [
         kind: 'prefer_destination',
         destination_ids: ['dest-lencois'],
         weight: 0.8,
-        summary: 'Lençóis Maranhenses como primeira opção',
+        summary: destinationPreferenceSummary(['dest-lencois']),
       },
       { id: 'ana-s2', kind: 'prefer_tags', tags: ['praia'], weight: 0.5, summary: 'Prefere praia' },
     ],
@@ -100,7 +102,7 @@ export const constraints: Constraints[] = [
         kind: 'prefer_destination',
         destination_ids: ['dest-jericoacoara', 'dest-paraty'],
         weight: 0.9,
-        summary: 'Jericoacoara ou Paraty como primeiras opções',
+        summary: destinationPreferenceSummary(['dest-jericoacoara', 'dest-paraty']),
       },
       { id: 'bruno-s2', kind: 'prefer_tags', tags: ['praia'], weight: 0.6, summary: 'Prefere praia' },
       { id: 'bruno-s3', kind: 'pace', pace: 'intense', weight: 0.6, summary: 'Ritmo agitado' },
@@ -119,7 +121,7 @@ export const constraints: Constraints[] = [
         kind: 'prefer_destination',
         destination_ids: ['dest-chapada'],
         weight: 0.9,
-        summary: 'Chapada Diamantina como primeira opção',
+        summary: destinationPreferenceSummary(['dest-chapada']),
       },
       { id: 'carla-s2', kind: 'prefer_tags', tags: ['serra'], weight: 0.6, summary: 'Prefere serra' },
       { id: 'carla-s3', kind: 'pace', pace: 'relaxed', weight: 0.7, summary: 'Ritmo tranquilo' },
@@ -129,29 +131,37 @@ export const constraints: Constraints[] = [
   },
 ]
 
-/** Resposta de exemplo de POST /invite/{token}/constraints/parse (referência visual). */
-export function sampleInterpretation(rawText: string): ConstraintsInput {
-  return {
-    raw_text: rawText,
-    hard: [
-      {
-        id: 'parsed-h1',
-        kind: 'date_range',
-        start: '2027-07-10',
-        end: '2027-07-20',
-        summary: 'Datas entre 10 e 20 de julho',
-      },
-      {
-        id: 'parsed-h2',
-        kind: 'budget',
-        max_per_person: 1100,
-        all_inclusive: true,
-        summary: 'Até R$ 1.100 por pessoa, tudo incluso',
-      },
-      { id: 'parsed-h3', kind: 'exclude_climate', climates: ['cold'], summary: 'Nada de destino frio' },
-    ],
-    soft: [
-      { id: 'parsed-s1', kind: 'pace', pace: 'relaxed', weight: 0.6, summary: 'Ritmo tranquilo, sem acordar cedo' },
-    ],
-  }
+const evaInterpretation: Omit<ConstraintsInput, 'raw_text'> = {
+  hard: [
+    { id: 'eva-h1', kind: 'date_range', start: '2027-07-10', end: '2027-07-20', summary: dateRangeSummary('2027-07-10', '2027-07-20') },
+    {
+      id: 'eva-h2',
+      kind: 'budget',
+      max_per_person: 1100,
+      all_inclusive: true,
+      summary: 'Até R$ 1.100 por pessoa, tudo incluso',
+    },
+    { id: 'eva-h3', kind: 'exclude_climate', climates: ['cold'], summary: 'Nada de destino frio' },
+  ],
+  soft: [{ id: 'eva-s1', kind: 'pace', pace: 'relaxed', weight: 0.6, summary: 'Ritmo tranquilo, sem acordar cedo' }],
+}
+
+/** Diego só pode viajar 3 noites: com 6 noites fixadas, nenhum plano é viável. */
+const diegoInterpretation: Omit<ConstraintsInput, 'raw_text'> = {
+  hard: [
+    { id: 'diego-h1', kind: 'date_range', start: '2027-07-12', end: '2027-07-15', summary: dateRangeSummary('2027-07-12', '2027-07-15') },
+  ],
+  soft: [],
+}
+
+/**
+ * Resposta de exemplo de POST /invite/{token}/constraints/parse. Sem IA, o mock
+ * devolve uma interpretação fixa por pessoa, qualquer que seja o texto: a de
+ * Eva é a da referência visual; a de Diego leva à rodada sem plano viável; quem
+ * já respondeu recebe as próprias restrições. Todas estão em fixtures/july-trip.json.
+ */
+export function sampleInterpretation(memberId: string, rawText: string): ConstraintsInput {
+  const saved = constraints.find((item) => item.member_id === memberId)
+  const sample = saved ?? (memberId === 'mem-diego' ? diegoInterpretation : evaInterpretation)
+  return structuredClone({ raw_text: rawText, hard: sample.hard, soft: sample.soft })
 }

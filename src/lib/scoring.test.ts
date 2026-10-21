@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { balanceScore, rankPlans, summarizeScores, toPercent } from './scoring'
 
-const scores = (...values: number[]) => values.map((score, index) => ({ member_id: `m${index}`, score }))
+const scores = (...values: number[]) =>
+  values.map((score, index) => ({ member_id: `m${index}`, score, has_preferences: true, best_possible: 1 }))
 
 // Satisfações da rodada 1 da referência visual (Ana, Bruno, Carla, Eva).
 const plans = [
