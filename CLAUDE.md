@@ -8,15 +8,16 @@ Planejador de viagens em grupo: cada participante informa limites e preferência
 
 - Especificação completa: `docs/especificacao.md`. Leia antes de qualquer tarefa nova.
 - Referência visual aprovada: `docs/design/` (veja abaixo).
-- Nome do produto ainda não definido: use `[NOME]` na interface e mantenha isso num único lugar (`src/config/brand.ts`).
+- Nome do produto ainda não definido: use `[NOME]` na interface e mantenha isso num único lugar (`src/config/brand.ts`). O `index.html` recebe o nome no build, por `vite.config.ts`.
 
 ## Origem do repositório
 
-O código atual é o plann.er do NLW Journey (Rocketseat). A interface está sendo **substituída** pela nova. Do código antigo só se aproveita o esqueleto: Vite, React, TypeScript, Tailwind, React Router e o padrão de `tailwind-variants`. Componentes e páginas antigas podem ser removidos.
+O projeto nasceu do plann.er do NLW Journey (Rocketseat). A interface antiga já foi totalmente removida; do código original ficou só o esqueleto: Vite, React, TypeScript, Tailwind, React Router e o padrão de `tailwind-variants`.
 
 ## Stack
 
 - Vite + React 18 + TypeScript (strict)
+- Vitest para testes unitários
 - Tailwind CSS 3 com tokens próprios (abaixo)
 - React Router 6
 - `tailwind-variants` para variantes de componentes
@@ -28,7 +29,10 @@ O código atual é o plann.er do NLW Journey (Rocketseat). A interface está sen
 - Componentes nunca contêm dados fixos de negócio: tudo passa por `src/lib/api.ts`.
 - Tipos do contrato em `src/types/api.ts`, espelhando os modelos da especificação.
 - Dados de exemplo em `src/mocks/`, coerentes entre si (mesmo grupo, mesmos números em todas as telas).
-- A pontuação do motor existe no front **só nos mocks** (`src/mocks/engine.ts`) para a tela de planos funcionar; ela espelha a fórmula da especificação e será substituída pela resposta da API.
+- O front não implementa o motor: os planos e scores vêm prontos da API (hoje, de `src/mocks/plans.ts`). A única pontuação no front é a simulação do critério de equilíbrio em `src/lib/scoring.ts`, que reordena as alternativas quando o organizador mexe no α; ela espelha a fórmula da especificação e não muda o plano recomendado.
+- Modo demonstração: enquanto os dados vêm dos mocks, `src/config/demo.ts` liga a faixa "Demonstração com dados de exemplo" em todas as telas e o roteiro da página inicial. Os atalhos e o reinício dos dados ficam em `src/lib/demo.ts`. Desligue quando a API real estiver no ar.
+- Os dados de exemplo ficam salvos no `localStorage` (`src/mocks/store.ts`). Ao mudar o formato dos dados, suba a versão da chave de armazenamento.
+- O orçamento de cada pessoa é confidencial: nenhuma tela ou justificativa mostra o valor para o grupo.
 - Estrutura de pastas: `src/pages/` (uma pasta por tela), `src/components/` (compartilhados), `src/lib/`, `src/types/`, `src/mocks/`, `src/config/`.
 - Nomes de código, arquivos e funções em inglês. Texto da interface em português do Brasil.
 
@@ -69,7 +73,8 @@ Tema escuro, sóbrio e técnico. Deve transmitir credibilidade: uma ferramenta q
 
 - Acessibilidade: `lang="pt-BR"`, `<label>` em todo campo, `aria-label` em botões só com ícone, alvos de toque de pelo menos 44 px, contraste mínimo de 4,5:1, foco visível, nada clicável que não seja `<button>` ou `<a>`.
 - Responsivo: funciona a partir de 360 px de largura. A tela do convidado é pensada primeiro para celular.
-- Antes de concluir qualquer tarefa, rode `npm run typecheck` (crie o script se não existir), `npm run lint` e `npm run build`, e corrija o que falhar.
+- Antes de concluir qualquer tarefa, rode `npm run typecheck`, `npm run lint`, `npm test` e `npm run build`, e corrija o que falhar.
+- Textos da interface não supõem gênero de pessoas nem de títulos digitados pelo usuário (por exemplo, "o limite de Eva", não "da Eva").
 
 ## Git
 

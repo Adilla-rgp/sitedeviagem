@@ -1,18 +1,51 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
-    extend: {
-      fontFamily: {
-        sans:'Inter', 
+    // Paleta substituída (não estendida): só os tokens do CLAUDE.md ficam disponíveis.
+    colors: {
+      transparent: 'transparent',
+      current: 'currentColor',
+      bg: '#0E0D12',
+      surface: {
+        DEFAULT: '#17151E',
+        sunken: '#131119',
+        raised: '#1E1A2B',
       },
-      boxShadow: {
-        shape:'0px 8px 8px rgba(0, 0, 0, 0.1), 8px 4px 4px rgba(0, 0, 0, 0.1), 8px 2px 2px rgba(0, 0, 0, 0.1), 0px 0px 0px 1px rgba(0, 0, 0, 0.1), insert 0px 0px 0px 1px rgba(255, 255, 255, 0.03), insert 0px 1px 0px rgba(255, 255, 255, 0.03)'
-      }
+      line: {
+        DEFAULT: '#2A2733',
+        strong: '#3A3645',
+        subtle: '#211F29',
+      },
+      ink: {
+        DEFAULT: '#EDEBF2',
+        soft: '#D6D3DE',
+        muted: '#A19DAD',
+      },
+      accent: {
+        DEFAULT: '#A78BFA',
+        soft: '#C4B5FD',
+        line: '#4C3F7A',
+      },
+      warn: {
+        DEFAULT: '#F5B454',
+        bg: '#2A2215',
+        line: '#6B5427',
+      },
+      'neutral-link': '#4A4560',
     },
+    fontFamily: {
+      sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+      mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+    },
+    borderRadius: {
+      none: '0',
+      sm: '6px', // etiquetas
+      DEFAULT: '8px', // controles, campos e cartões
+      panel: '10px', // painéis principais
+      full: '9999px',
+    },
+    extend: {},
   },
   plugins: [],
 }
