@@ -71,9 +71,9 @@ score(p) = (1 − α) · média(s_i(p)) + α · min(s_i(p))
 | catalog_destinations | id, name, state, climate, est_cost_per_person, cost_source, tags |
 | trips | id, title, organizer_id, date_window_start, date_window_end, alpha, status, created_at |
 | trip_destinations | trip_id, destination_id |
-| members | id, trip_id, display_name, invite_token, responded_at |
+| members | id, trip_id, display_name, invite_token, is_organizer, responded_at |
 | constraints | id, member_id, raw_text, hard (JSONB), soft (JSONB), confirmed_at, version |
-| plans | id, trip_id, round, destination_id, start_date, end_date, score, per_member_scores (JSONB), explanation (JSONB) |
+| plans | id, trip_id, round, destination_id, variant_label, start_date, end_date, est_cost_per_person, score, per_member_scores (JSONB), explanation (JSONB) |
 | reactions | id, plan_id, member_id, verdict, comment |
 
 `status` da viagem: `collecting` → `planned` → `agreed`.
@@ -86,13 +86,28 @@ score(p) = (1 − α) · média(s_i(p)) + α · min(s_i(p))
 | GET | /destinations | todos | Catálogo de destinos |
 | POST | /trips | organizador | Cria viagem |
 | GET | /trips/{id} | organizador | Viagem, membros e status das respostas |
+| GET | /trips/{id}/tensions | organizador | Pares compatíveis ou em conflito, principais restrições e viabilidade por destino |
 | POST | /trips/{id}/members | organizador | Gera convites |
 | GET | /invite/{token} | convidado | Dados da viagem para responder |
 | POST | /invite/{token}/constraints/parse | convidado | IA interpreta texto livre (não salva) |
 | PUT | /invite/{token}/constraints | convidado | Salva restrições confirmadas |
 | POST | /trips/{id}/plans | organizador | Roda o motor e gera a rodada |
 | GET | /trips/{id}/plans?round=n | ambos | Planos, scores e justificativas |
-| POST | /plans/{id}/reactions | convidado | Reage ao plano |
+| POST | /plans/{id}/reactions | convidado | Reage ao plano (identificado pelo `invite_token`) |
+
+Os tipos exatos estão em `src/types/api.ts`. Detalhes acrescentados durante a implementação do front:
+
+- **members.is_organizer:** marca quem organiza, para a interface dizer "Ana convidou você" e "Ana · você".
+- **Itens de restrição (`hard` e `soft`):** cada item tem `id`, `kind`, os valores estruturados e um `summary`, uma frase pronta para exibição gerada pela API ("Até R$ 1.100 por pessoa, tudo incluso").
+- **plans.variant_label:** nome de uma variante do mesmo destino ("roteiro curto"); nulo no roteiro padrão. **plans.est_cost_per_person:** custo estimado do plano por pessoa.
+- **Reações:** o convidado não tem conta, então `POST /plans/{id}/reactions` recebe o `invite_token` em vez de `member_id`.
+- **GET /invite/{token}** devolve a viagem, o participante, `organizer_name`, `member_count`, os destinos candidatos e as restrições já salvas (ou nulo).
+- **GET /trips/{id}/tensions** devolve, considerando só quem já respondeu:
+  - `pairs`: cada par de participantes com `status` (`compatible` ou `conflict`) e, no conflito, o `criterion` principal (`dates`, `budget`, `climate` ou `pace`, nessa ordem de prioridade);
+  - `key_constraints`: as principais restrições, cada uma com `id` e `summary`;
+  - `viability`: para cada destino, `accepted_count` de `responded_count`;
+  - `most_restrictive_member_id`: quem tem mais limites, quando há um só.
+- **Regras de conflito do mapa:** datas, quando dois limites de data têm menos de 4 dias em comum; orçamento ou clima, quando o limite de um elimina um destino que o outro prefere; ritmo, quando um prefere tranquilo e outro agitado, ambos com peso de pelo menos 0,8.
 
 ## Roadmap
 
