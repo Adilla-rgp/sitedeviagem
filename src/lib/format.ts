@@ -24,6 +24,22 @@ export function formatDateRange(start: IsoDate, end: IsoDate): string {
   return `${formatDay(startDate)} de ${monthFormatter.format(startDate)} a ${formatDay(endDate)} de ${endMonth}`
 }
 
+const currencyFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  maximumFractionDigits: 0,
+})
+
+/** "R$ 1.050" */
+export function formatCurrency(value: number): string {
+  return currencyFormatter.format(value)
+}
+
+/** "0,5" */
+export function formatDecimal(value: number, fractionDigits = 1): string {
+  return value.toFixed(fractionDigits).replace('.', ',')
+}
+
 /** "Eva", "Eva e Diego", "Ana, Eva e Diego". */
 export function formatList(items: string[]): string {
   if (items.length <= 1) return items.join('')
