@@ -14,6 +14,8 @@ import { useDocumentTitle } from '../../lib/use-document-title'
 import { useGeneratePlans } from '../../lib/use-generate-plans'
 import type { PlanRound, Reaction, TripDetail } from '../../types/api'
 import { BalancePanel } from './balance-panel'
+import { ExcludedPanel } from './excluded-panel'
+import { InfeasibleRound } from './infeasible-round'
 import { ReactionsPanel } from './reactions-panel'
 
 const MIN_RESPONSES_TO_PLAN = 2
@@ -85,7 +87,14 @@ export function PlansPage() {
     <>
       <TripHeader tripId={id} />
       {state.status === 'ready' ? (
-        state.round ? (
+        state.round && state.round.plans.length === 0 ? (
+          <InfeasibleRound
+            key={state.round.round}
+            trip={state.trip}
+            round={state.round}
+            onGenerated={(round) => setState({ status: 'ready', trip: state.trip, round })}
+          />
+        ) : state.round ? (
           <PlansContent
             key={state.round.round}
             trip={state.trip}
@@ -152,6 +161,7 @@ function PlansContent({ trip, round, onReactionSaved }: PlansContentProps) {
           alpha={alpha}
           onAlphaChange={setAlpha}
         />
+        <ExcludedPanel round={round} destinations={trip.destinations} members={trip.members} />
       </aside>
     </main>
   )

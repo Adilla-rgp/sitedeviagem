@@ -23,7 +23,7 @@ interface BalancePanelProps {
 
 export function BalancePanel({ round, destinations, members, alpha, onAlphaChange }: BalancePanelProps) {
   const inputId = useId()
-  const engineAlpha = round.plans[0]?.alpha ?? 0.5
+  const engineAlpha = round.alpha
   const ranked = rankPlans(round.plans, alpha)
   const simulatedLeader = ranked[0]
   const leaderChanged = simulatedLeader && simulatedLeader.id !== round.recommended_plan_id
