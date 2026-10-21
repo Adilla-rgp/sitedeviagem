@@ -73,8 +73,8 @@ score(p) = (1 − α) · média(s_i(p)) + α · min(s_i(p))
 | trip_destinations | trip_id, destination_id |
 | members | id, trip_id, display_name, invite_token, is_organizer, responded_at |
 | constraints | id, member_id, raw_text, hard (JSONB), soft (JSONB), confirmed_at, version |
-| plans | id, trip_id, round, destination_id, variant_label, start_date, end_date, est_cost_per_person, score, per_member_scores (JSONB), explanation (JSONB) |
-| reactions | id, plan_id, member_id, verdict, comment |
+| plans | id, trip_id, round, destination_id, variant_label, start_date, end_date, est_cost_per_person, score, alpha, alternatives_evaluated, violated_limits, per_member_scores (JSONB), explanation (JSONB) |
+| reactions | id, plan_id, member_id, verdict, comment, reacted_at |
 
 `status` da viagem: `collecting` → `planned` → `agreed`.
 
@@ -100,8 +100,11 @@ Os tipos exatos estão em `src/types/api.ts`. Detalhes acrescentados durante a i
 - **members.is_organizer:** marca quem organiza, para a interface dizer "Ana convidou você" e "Ana · você".
 - **Itens de restrição (`hard` e `soft`):** cada item tem `id`, `kind`, os valores estruturados e um `summary`, uma frase pronta para exibição gerada pela API ("Até R$ 1.100 por pessoa, tudo incluso").
 - **plans.variant_label:** nome de uma variante do mesmo destino ("roteiro curto"); nulo no roteiro padrão. **plans.est_cost_per_person:** custo estimado do plano por pessoa.
-- **Reações:** o convidado não tem conta, então `POST /plans/{id}/reactions` recebe o `invite_token` em vez de `member_id`.
-- **GET /invite/{token}** devolve a viagem, o participante, `organizer_name`, `member_count`, os destinos candidatos e as restrições já salvas (ou nulo).
+- **plans.alpha, alternatives_evaluated, violated_limits:** o α que o motor usou, quantas alternativas avaliou na rodada e quantos limites o plano viola (sempre zero nos planos devolvidos).
+- **Rodadas:** `GET /trips/{id}` e `GET /invite/{token}` trazem `latest_round` (nulo antes da primeira). `GET /trips/{id}/plans?round=n` devolve `plans` (do maior para o menor score), `recommended_plan_id` e `reactions`; o organizador recebe todas as reações, o convidado só a própria. Rodada inexistente responde 404. `POST /trips/{id}/plans` exige pelo menos 2 respostas.
+- **Reações:** o convidado não tem conta, então `POST /plans/{id}/reactions` recebe o `invite_token` em vez de `member_id`. Reagir de novo ao mesmo plano substitui a reação anterior. O comentário é obrigatório em "aceito com ressalva" e "recuso"; o motivo da recusa vira restrição na rodada seguinte.
+- **Justificativas** nunca citam o valor do orçamento de alguém, porque ele é confidencial.
+- **GET /invite/{token}** devolve a viagem, o participante, `organizer_name`, `member_count`, os destinos candidatos, as restrições já salvas (ou nulo) e `latest_round`.
 - **GET /trips/{id}/tensions** devolve, considerando só quem já respondeu:
   - `pairs`: cada par de participantes com `status` (`compatible` ou `conflict`) e, no conflito, o `criterion` principal (`dates`, `budget`, `climate` ou `pace`, nessa ordem de prioridade);
   - `key_constraints`: as principais restrições, cada uma com `id` e `summary`;

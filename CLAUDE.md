@@ -28,7 +28,7 @@ O código atual é o plann.er do NLW Journey (Rocketseat). A interface está sen
 - Componentes nunca contêm dados fixos de negócio: tudo passa por `src/lib/api.ts`.
 - Tipos do contrato em `src/types/api.ts`, espelhando os modelos da especificação.
 - Dados de exemplo em `src/mocks/`, coerentes entre si (mesmo grupo, mesmos números em todas as telas).
-- A pontuação do motor existe no front **só nos mocks** (`src/mocks/engine.ts`) para a tela de planos funcionar; ela espelha a fórmula da especificação e será substituída pela resposta da API.
+- O front não implementa o motor: os planos e scores vêm prontos da API (hoje, de `src/mocks/plans.ts`). A única pontuação no front é a simulação do critério de equilíbrio em `src/lib/scoring.ts`, que reordena as alternativas quando o organizador mexe no α; ela espelha a fórmula da especificação e não muda o plano recomendado.
 - Estrutura de pastas: `src/pages/` (uma pasta por tela), `src/components/` (compartilhados), `src/lib/`, `src/types/`, `src/mocks/`, `src/config/`.
 - Nomes de código, arquivos e funções em inglês. Texto da interface em português do Brasil.
 
