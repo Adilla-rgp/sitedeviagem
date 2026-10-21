@@ -1,4 +1,4 @@
-import type { Destination, Member, Plan, Reaction, Verdict } from '../types/api'
+import type { Destination, GroupMember, Plan, Reaction, Verdict } from '../types/api'
 
 /** "Lençóis Maranhenses" ou "Lençóis Maranhenses, roteiro curto". */
 export function planTitle(plan: Plan, destinations: Destination[]): string {
@@ -24,6 +24,6 @@ export function reactionOf(reactions: Reaction[], planId: string, memberId: stri
   return reactions.find((reaction) => reaction.plan_id === planId && reaction.member_id === memberId) ?? null
 }
 
-export function memberName(members: Member[], memberId: string): string {
+export function memberName(members: GroupMember[], memberId: string): string {
   return members.find((member) => member.id === memberId)?.display_name ?? ''
 }

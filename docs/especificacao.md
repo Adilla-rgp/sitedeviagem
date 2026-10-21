@@ -104,7 +104,7 @@ Os tipos exatos estão em `src/types/api.ts`. Detalhes acrescentados durante a i
 - **Rodadas:** `GET /trips/{id}` e `GET /invite/{token}` trazem `latest_round` (nulo antes da primeira). `GET /trips/{id}/plans?round=n` devolve `plans` (do maior para o menor score), `recommended_plan_id` e `reactions`; o organizador recebe todas as reações, o convidado só a própria. Rodada inexistente responde 404. `POST /trips/{id}/plans` exige pelo menos 2 respostas.
 - **Reações:** o convidado não tem conta, então `POST /plans/{id}/reactions` recebe o `invite_token` em vez de `member_id`. Reagir de novo ao mesmo plano substitui a reação anterior. O comentário é obrigatório em "aceito com ressalva" e "recuso"; o motivo da recusa vira restrição na rodada seguinte.
 - **Justificativas** nunca citam o valor do orçamento de alguém, porque ele é confidencial.
-- **GET /invite/{token}** devolve a viagem, o participante, `organizer_name`, `member_count`, os destinos candidatos, as restrições já salvas (ou nulo) e `latest_round`.
+- **GET /invite/{token}** devolve a viagem, o participante, `organizer_name`, `member_count`, os destinos candidatos, as restrições já salvas (ou nulo), `latest_round` e `members` (id, nome, se organiza e se respondeu; nunca os tokens de convite dos outros).
 - **GET /trips/{id}/tensions** devolve, considerando só quem já respondeu:
   - `pairs`: cada par de participantes com `status` (`compatible` ou `conflict`) e, no conflito, o `criterion` principal (`dates`, `budget`, `climate` ou `pace`, nessa ordem de prioridade);
   - `key_constraints`: as principais restrições, cada uma com `id` e `summary`;

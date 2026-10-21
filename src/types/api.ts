@@ -43,6 +43,9 @@ export interface Member {
   responded_at: IsoDateTime | null
 }
 
+/** Participante como os outros convidados o veem: sem o token do convite. */
+export type GroupMember = Pick<Member, 'id' | 'display_name' | 'is_organizer' | 'responded_at'>
+
 /** GET /trips/{id} */
 export interface TripDetail extends Trip {
   destinations: Destination[]
@@ -112,6 +115,8 @@ export interface Invite {
   member: Member
   organizer_name: string
   member_count: number
+  /** Todos do grupo, para mostrar nomes no plano. Nunca inclui tokens de convite. */
+  members: GroupMember[]
   destinations: Destination[]
   constraints: Constraints | null
   /** Rodada de planos mais recente; nulo se o motor ainda não rodou. */

@@ -1,10 +1,10 @@
 import { formatCount } from '../../lib/format'
 import { memberName } from '../../lib/plans'
-import type { Member, Plan } from '../../types/api'
+import type { GroupMember, Plan } from '../../types/api'
 
 interface JustificationPanelProps {
   plan: Plan
-  members: Member[]
+  members: GroupMember[]
 }
 
 export function JustificationPanel({ plan, members }: JustificationPanelProps) {

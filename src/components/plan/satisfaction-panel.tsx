@@ -1,10 +1,10 @@
 import { memberName } from '../../lib/plans'
 import { summarizeScores, toPercent } from '../../lib/scoring'
-import type { Member, Plan } from '../../types/api'
+import type { GroupMember, Plan } from '../../types/api'
 
 interface SatisfactionPanelProps {
   plan: Plan
-  members: Member[]
+  members: GroupMember[]
   /** Participante que está vendo a tela, marcado com "você". */
   viewerId?: string
 }

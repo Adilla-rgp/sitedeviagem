@@ -180,6 +180,12 @@ export function getInvite(token: string): Promise<Invite> {
       member,
       organizer_name: organizer?.display_name ?? '',
       member_count: tripMembers.length,
+      members: tripMembers.map(({ id, display_name, is_organizer, responded_at }) => ({
+        id,
+        display_name,
+        is_organizer,
+        responded_at,
+      })),
       destinations: tripDestinations(trip.id),
       constraints: latestConstraints(member.id),
       latest_round: latestRound(trip.id),
