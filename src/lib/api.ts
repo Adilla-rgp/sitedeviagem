@@ -13,7 +13,7 @@ import type {
   Trip,
   TripDetail,
 } from '../types/api'
-import { db, nextId } from '../mocks/store'
+import { db, nextId, persistDb } from '../mocks/store'
 import { scorePlan } from '../mocks/engine'
 import { roundOnePlans } from '../mocks/plans'
 import { sampleInterpretation } from '../mocks/trip-july'
@@ -44,8 +44,10 @@ function respond<T>(handler: () => T): Promise<T> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       try {
+        const result = handler()
+        persistDb()
         // Cópia para que a tela nunca altere o banco em memória por referência.
-        resolve(structuredClone(handler()))
+        resolve(structuredClone(result))
       } catch (error) {
         reject(error)
       }
