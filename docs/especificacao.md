@@ -55,6 +55,61 @@ score(p) = (1 − α) · média(s_i(p)) + α · min(s_i(p))
 
 `α = 0` favorece a média; `α = 1` protege quem sai pior.
 
+### Decisões do motor (21/10/2026)
+
+A implementação de referência fica no repositório `planner-api`, no pacote `engine/`. Os testes de lá cobrem cada regra abaixo.
+
+**Duração.** O organizador fixa a duração ao criar a viagem (`trips.nights`, padrão 6). Para cada destino, o motor testa o roteiro padrão e um "roteiro curto" com 2 noites a menos (no mínimo 2 noites). O dia da volta é o dia da ida mais `nights`.
+
+**Custo.** Cada destino do catálogo tem `fixed_cost` (passagem de ida e volta) e `nightly_cost` (hospedagem e gastos por noite). O custo de um plano é `fixed_cost + noites × nightly_cost`. O `est_cost_per_person` de um destino na API é calculado com o `nights` da viagem. O limite de orçamento é comparado sempre com o custo total; `all_inclusive` só muda o texto do resumo.
+
+**Ritmo do destino.** O catálogo tem o campo `pace` (`relaxed`, `balanced` ou `intense`), definido à mão.
+
+**Satisfação.** Para cada pessoa e candidato:
+
+```
+s_i = (Σ w_k · m_k / Σ w_k) · fator de duração
+```
+
+A média só considera as preferências que a pessoa declarou. O que ela não mencionou é neutro (0,5), fica fora da média e nunca aparece como concessão.
+
+| Termo | Peso | `m` |
+| --- | --- | --- |
+| `prefer_destination` | o declarado | 1 para o primeiro da lista, 0,75 para outro destino listado, 0,4 para destino não listado (destino vetado é limite e nem chega aqui) |
+| `prefer_tags` | o declarado | fração das tags pedidas que o destino tem; nenhuma = 0 |
+| `prefer_climate` | o declarado | `1 − \|preferência − destino\|`, com quente = 0, ameno = 0,5, frio = 1; com mais de um clima pedido, vale o mais próximo |
+| `pace` | o declarado | `1 − \|preferência − destino\|`, com tranquilo = 0, equilibrado = 0,5, agitado = 1 |
+| folga no orçamento (só para quem tem limite) | 0,5 | `0,5 + 0,5 · clamp((B − custo) / (0,2 · B), 0, 1)`: de 0,5, quando o plano cabe no limite, a 1, com folga de 20% ou mais |
+
+O **fator de duração** vale 1 no roteiro padrão. No roteiro curto, vale `1 − 0,3 · noites perdidas / trips.nights` (0,9 com 6 noites) e se aplica a todos, porque a duração foi escolhida para o grupo. Ele é fator e não termo da média para que perder dias nunca aumente a satisfação de ninguém.
+
+**Quem não declarou preferências** fica com satisfação 0,5 e fora do score do plano (média e mínimo). Na saída, essa pessoa aparece com `has_preferences = false`. O termo de orçamento não conta como preferência declarada.
+
+**Score.** `score(p) = (1 − α) · média(s_i) + α · min(s_i)`, só com quem tem preferências. Se ninguém tiver preferências, o score é 0 em todos os planos e a ordem sai só do desempate.
+
+**Escolha das alternativas.** A satisfação não depende do dia de ida, então cada destino e variante usa o primeiro dia viável. As alternativas são ordenadas pelo score arredondado em 4 casas. Em caso de empate, vem primeiro o roteiro padrão, depois o menor custo e depois o id do destino. O motor devolve até 3. `alternatives_evaluated` é o número de candidatos gerados (destino × variante × dia de ida).
+
+**Melhor possível.** Cada satisfação vem com `best_possible`: a maior satisfação que a pessoa teria em qualquer candidato que respeita os limites de todo o grupo. Isso mostra quanto da concessão é imposta pelos limites dos outros e quanto é escolha do plano.
+
+**Destinos excluídos.** A rodada devolve `excluded_destinations` com cada destino da viagem que não aparece nas alternativas e o motivo:
+
+- `limit`: nenhum candidato do destino respeita os limites. Traz os limites que ferem todos os candidatos; se o destino cai por uma combinação de limites, traz os que, retirados sozinhos, liberariam algum candidato; senão, todos os envolvidos. Cada limite aparece só como tipo e participante, nunca com o valor.
+- `lower_score`: viável, com score menor. Traz o melhor score entre as variantes do destino.
+
+**Sem plano viável.** O motor aponta o limite que, retirado sozinho, liberaria mais candidatos. Em caso de empate, usa o limite que aparece em mais violações. O formato dessa resposta na API ainda precisa ser definido. Ela não pode usar o `summary` de um limite de orçamento, porque o resumo traz o valor.
+
+**Justificativas.** São geradas por regras a partir dos mesmos termos da satisfação, em frases completas e sem supor gênero:
+
+- "Ganhou …": até 2 preferências declaradas com `m ≥ 0,75`. Quando a pessoa ganha o destino que indicou, tags e clima viram complemento dele ("Ganhou o destino que indicou, com praia.").
+- "Abriu mão …": até 2 itens, primeiro os dias perdidos ("de 2 dias de viagem") e depois as preferências declaradas com `m` abaixo de 0,5 ("do destino que indicou", "de um destino de serra", "do ritmo agitado que pediu").
+- Orçamento em três faixas ("cabe no orçamento com folga", "com pouca folga" e "mas no limite"), nunca com o valor.
+
+**Limitações conhecidas.**
+
+- *Duração:* só existem duas durações, as noites fixadas pelo organizador e o roteiro curto com 2 a menos. O motor não testa roteiros mais longos nem durações intermediárias, e ninguém informa a duração que prefere. Quem só consegue viajar 3 dias, com 6 noites fixadas, elimina todos os candidatos.
+- *Custo* linear por noite, sem variação por data nem por tamanho do grupo.
+- *Datas* não afetam a satisfação: entre os dias viáveis, vale sempre o primeiro, mesmo quando outro deixaria mais folga nas datas de alguém.
+
 ## Arquitetura
 
 - **Front-end:** Vite, React, TypeScript, Tailwind. Deploy na Vercel. (Este repositório.)
@@ -68,8 +123,8 @@ score(p) = (1 − α) · média(s_i(p)) + α · min(s_i(p))
 
 | Tabela | Campos principais |
 | --- | --- |
-| catalog_destinations | id, name, state, climate, est_cost_per_person, cost_source, tags |
-| trips | id, title, organizer_id, date_window_start, date_window_end, alpha, status, created_at |
+| catalog_destinations | id, name, state, climate, pace, fixed_cost, nightly_cost, cost_source, tags |
+| trips | id, title, organizer_id, date_window_start, date_window_end, nights, alpha, status, created_at |
 | trip_destinations | trip_id, destination_id |
 | members | id, trip_id, display_name, invite_token, is_organizer, responded_at |
 | constraints | id, member_id, raw_text, hard (JSONB), soft (JSONB), confirmed_at, version |
