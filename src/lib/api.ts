@@ -12,10 +12,12 @@ import type {
   Reaction,
   Trip,
   TripDetail,
+  TripTensions,
 } from '../types/api'
 import { db, nextId, persistDb } from '../mocks/store'
 import { scorePlan } from '../mocks/engine'
 import { roundOnePlans } from '../mocks/plans'
+import { computeTensions } from '../mocks/tensions'
 import { sampleInterpretation } from '../mocks/trip-july'
 
 // Única porta de entrada de dados do front. Cada função espelha uma rota do
@@ -204,6 +206,20 @@ export function saveConstraints(token: string, input: ConstraintsInput): Promise
     db.constraints.push(record)
     member.responded_at = confirmedAt
     return record
+  })
+}
+
+/** GET /trips/{id}/tensions — compatibilidade, principais restrições e viabilidade. */
+export function getTripTensions(tripId: string): Promise<TripTensions> {
+  return respond(() => {
+    const trip = findTrip(tripId)
+    const members = db.members.filter((member) => member.trip_id === tripId)
+    return computeTensions({
+      trip,
+      members,
+      destinations: tripDestinations(tripId),
+      constraints: members.flatMap((member) => latestConstraints(member.id) ?? []),
+    })
   })
 }
 

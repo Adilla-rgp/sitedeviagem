@@ -84,7 +84,7 @@ export const constraints: Constraints[] = [
   {
     id: 'cons-bruno-1',
     member_id: 'mem-bruno',
-    raw_text: 'Só consigo de 8 a 18 de julho. Quero praia e agito, Jeri seria perfeito.',
+    raw_text: 'Só consigo de 8 a 18 de julho. Quero praia e agito: Jeri seria perfeito, Paraty também.',
     hard: [
       {
         id: 'bruno-h1',
@@ -98,9 +98,9 @@ export const constraints: Constraints[] = [
       {
         id: 'bruno-s1',
         kind: 'prefer_destination',
-        destination_ids: ['dest-jericoacoara'],
+        destination_ids: ['dest-jericoacoara', 'dest-paraty'],
         weight: 0.9,
-        summary: 'Jericoacoara como primeira opção',
+        summary: 'Jericoacoara ou Paraty como primeiras opções',
       },
       { id: 'bruno-s2', kind: 'prefer_tags', tags: ['praia'], weight: 0.6, summary: 'Prefere praia' },
       { id: 'bruno-s3', kind: 'pace', pace: 'intense', weight: 0.6, summary: 'Ritmo agitado' },
