@@ -5,12 +5,14 @@ import { AlertMessage } from '../../components/alert-message'
 import { Button } from '../../components/button'
 import { JustificationPanel } from '../../components/plan/justification-panel'
 import { PlanHeading } from '../../components/plan/plan-heading'
+import { ReactionForm } from '../../components/plan/reaction-form'
 import { SatisfactionPanel } from '../../components/plan/satisfaction-panel'
 import { TripHeader } from '../../components/trip-header'
 import { ApiError, getPlans, getTrip } from '../../lib/api'
+import { reactionOf } from '../../lib/plans'
 import { useDocumentTitle } from '../../lib/use-document-title'
 import { useGeneratePlans } from '../../lib/use-generate-plans'
-import type { PlanRound, TripDetail } from '../../types/api'
+import type { PlanRound, Reaction, TripDetail } from '../../types/api'
 import { BalancePanel } from './balance-panel'
 import { ReactionsPanel } from './reactions-panel'
 
@@ -68,12 +70,28 @@ export function PlansPage() {
     }
   }, [fetchData, attempt])
 
+  // A reação da organizadora entra na lista sem recarregar a página.
+  function handleReactionSaved(reaction: Reaction) {
+    setState((current) => {
+      if (current.status !== 'ready' || !current.round) return current
+      const others = current.round.reactions.filter(
+        (item) => !(item.plan_id === reaction.plan_id && item.member_id === reaction.member_id),
+      )
+      return { ...current, round: { ...current.round, reactions: [...others, reaction] } }
+    })
+  }
+
   return (
     <>
       <TripHeader tripId={id} />
       {state.status === 'ready' ? (
         state.round ? (
-          <PlansContent key={state.round.round} trip={state.trip} round={state.round} />
+          <PlansContent
+            key={state.round.round}
+            trip={state.trip}
+            round={state.round}
+            onReactionSaved={handleReactionSaved}
+          />
         ) : (
           <NoPlans trip={state.trip} onGenerated={(round) => setState({ status: 'ready', trip: state.trip, round })} />
         )
@@ -96,11 +114,13 @@ export function PlansPage() {
 interface PlansContentProps {
   trip: TripDetail
   round: PlanRound
+  onReactionSaved: (reaction: Reaction) => void
 }
 
-function PlansContent({ trip, round }: PlansContentProps) {
+function PlansContent({ trip, round, onReactionSaved }: PlansContentProps) {
   const recommended = round.plans.find((plan) => plan.id === round.recommended_plan_id) ?? round.plans[0]
   const [alpha, setAlpha] = useState(recommended.alpha)
+  const organizer = trip.members.find((member) => member.is_organizer)
 
   return (
     <main className="mx-auto flex max-w-[1280px] flex-wrap items-start gap-6 px-4 pb-10 pt-7 sm:px-8">
@@ -112,6 +132,15 @@ function PlansContent({ trip, round }: PlansContentProps) {
         />
         <SatisfactionPanel plan={recommended} members={trip.members} />
         <JustificationPanel plan={recommended} members={trip.members} />
+        {organizer && (
+          <ReactionForm
+            key={recommended.id}
+            token={organizer.invite_token}
+            planId={recommended.id}
+            initialReaction={reactionOf(round.reactions, recommended.id, organizer.id)}
+            onSaved={onReactionSaved}
+          />
+        )}
         <ReactionsPanel round={round} members={trip.members} />
       </div>
 

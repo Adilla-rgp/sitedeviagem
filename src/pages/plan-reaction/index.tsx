@@ -6,12 +6,12 @@ import { Button } from '../../components/button'
 import { buttonVariants } from '../../components/button-styles'
 import { JustificationPanel } from '../../components/plan/justification-panel'
 import { PlanHeading } from '../../components/plan/plan-heading'
+import { ReactionForm } from '../../components/plan/reaction-form'
 import { SatisfactionPanel } from '../../components/plan/satisfaction-panel'
 import { ApiError, getInvite, getPlans } from '../../lib/api'
 import { reactionOf } from '../../lib/plans'
 import { useDocumentTitle } from '../../lib/use-document-title'
 import type { Invite, PlanRound } from '../../types/api'
-import { ReactionForm } from './reaction-form'
 
 type PageState =
   | { status: 'loading' }

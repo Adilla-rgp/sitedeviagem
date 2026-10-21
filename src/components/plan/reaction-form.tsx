@@ -1,7 +1,7 @@
 import { LoaderCircle } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
-import { AlertMessage } from '../../components/alert-message'
-import { Button } from '../../components/button'
+import { AlertMessage } from '../alert-message'
+import { Button } from '../button'
 import { createReaction, getErrorMessage } from '../../lib/api'
 import { VERDICT_LABEL } from '../../lib/plans'
 import type { Reaction, Verdict } from '../../types/api'
@@ -30,12 +30,14 @@ const CONFIRMATION: Record<Verdict, string> = {
 type FocusTarget = 'choices' | 'comment' | 'confirmation'
 
 interface ReactionFormProps {
+  /** Token do convite de quem reage (convidado ou organizadora). */
   token: string
   planId: string
   initialReaction: Reaction | null
+  onSaved?: (reaction: Reaction) => void
 }
 
-export function ReactionForm({ token, planId, initialReaction }: ReactionFormProps) {
+export function ReactionForm({ token, planId, initialReaction, onSaved }: ReactionFormProps) {
   const [reaction, setReaction] = useState(initialReaction)
   const [isEditing, setIsEditing] = useState(initialReaction === null)
   const [pendingVerdict, setPendingVerdict] = useState<CommentVerdict | null>(null)
@@ -70,6 +72,7 @@ export function ReactionForm({ token, planId, initialReaction }: ReactionFormPro
     try {
       const saved = await createReaction(planId, { invite_token: token, verdict, comment: text })
       setReaction(saved)
+      onSaved?.(saved)
       setIsEditing(false)
       setPendingVerdict(null)
       pendingFocus.current = 'confirmation'
