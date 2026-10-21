@@ -1,7 +1,6 @@
 import type { Member, MemberPair, TensionCriterion, TripTensions } from '../../types/api'
 
 export const CRITERION_LABEL: Record<TensionCriterion, string> = {
-  budget: 'orçamento',
   climate: 'clima',
   dates: 'datas',
   pace: 'ritmo',

@@ -95,6 +95,23 @@ function PlanContent({ token, invite, round }: PlanContentProps) {
   }
 
   const plan = round.plans.find((item) => item.id === round.recommended_plan_id) ?? round.plans[0]
+  if (!plan) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-[13px] text-ink-muted">{context}</p>
+        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.01em]">
+          Nenhum plano respeita os limites de todos
+        </h1>
+        <p className="text-sm leading-normal text-ink-muted">
+          O motor não encontrou uma combinação de destino e datas que respeite os limites do grupo. {invite.organizer_name}{' '}
+          pode ajustar a viagem e gerar uma nova rodada; volte por este mesmo link para ver o resultado.
+        </p>
+        <Link to={`/convite/${token}`} className={buttonVariants({ variant: 'secondary', className: 'self-start hover:bg-surface' })}>
+          Ver minha resposta
+        </Link>
+      </div>
+    )
+  }
   // A API real devolve ao convidado só a própria reação; aqui filtramos do mesmo jeito.
   const ownReaction = reactionOf(round.reactions, plan.id, member.id)
   const wasCounted = plan.per_member_scores.some((item) => item.member_id === member.id)

@@ -1,4 +1,4 @@
-import type { Constraints, Destination, Member, Plan, Reaction, Trip } from '../types/api'
+import type { Constraints, Destination, Member, Plan, PlanRoundRecord, Reaction, Trip } from '../types/api'
 import { destinations } from './destinations'
 import { constraints, members, trip, tripDestinationIds } from './trip-july'
 
@@ -7,7 +7,7 @@ import { constraints, members, trip, tripDestinationIds } from './trip-july'
 // recarregar a página ou abrir outra aba. Para voltar ao estado inicial, abra
 // qualquer página com ?reset-mocks no endereço.
 
-const STORAGE_KEY = 'mock-db:v2'
+const STORAGE_KEY = 'mock-db:v3'
 const RESET_PARAM = 'reset-mocks'
 
 interface MockDb {
@@ -16,6 +16,8 @@ interface MockDb {
   tripDestinations: { trip_id: string; destination_id: string }[]
   members: Member[]
   constraints: Constraints[]
+  /** Uma por rodada, mesmo sem planos (rodada sem plano viável). */
+  planRounds: PlanRoundRecord[]
   plans: Plan[]
   reactions: Reaction[]
 }
@@ -27,6 +29,7 @@ function createSeed(): MockDb {
     tripDestinations: tripDestinationIds.map((destination_id) => ({ trip_id: trip.id, destination_id })),
     members,
     constraints,
+    planRounds: [],
     plans: [],
     reactions: [],
   })

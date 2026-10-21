@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { balanceScore, rankPlans, summarizeScores, toPercent } from './scoring'
+import { engineFixture } from '../mocks/engine-fixture'
+import type { MemberScore } from '../types/api'
+import { balanceScore, countedScores, rankPlans, summarizeScores, toPercent } from './scoring'
 
-const scores = (...values: number[]) => values.map((score, index) => ({ member_id: `m${index}`, score }))
+const scores = (...values: number[]): MemberScore[] =>
+  values.map((score, index) => ({ member_id: `m${index}`, score, has_preferences: true, best_possible: 1 }))
 
-// Satisfações da rodada 1 da referência visual (Ana, Bruno, Carla, Eva).
-const plans = [
-  { id: 'lencois', per_member_scores: scores(0.84, 0.8, 0.62, 0.82) },
-  { id: 'jericoacoara', per_member_scores: scores(0.88, 0.94, 0.5, 0.78) },
-  { id: 'lencois-curto', per_member_scores: scores(0.7, 0.66, 0.66, 0.86) },
-]
+const round = (name: string) => {
+  const found = engineFixture.rounds.find((item) => item.name === name)
+  if (!found) throw new Error(`Rodada ${name} não está no fixture`)
+  return found
+}
+
+// Planos da rodada recomendada da demonstração, com ids para conferir a ordem.
+const planNames = ['lencois', 'lencois-curto', 'paraty-curto']
+const plans = round('after_eva_response').plans.map((plan, index) => ({ ...plan, id: planNames[index] }))
 
 describe('balanceScore', () => {
   it('com α = 0 é a média', () => {
@@ -17,10 +23,6 @@ describe('balanceScore', () => {
 
   it('com α = 1 é a pior satisfação', () => {
     expect(balanceScore([0.2, 0.4, 0.9], 1)).toBeCloseTo(0.2)
-  })
-
-  it('com α = 0,5 combina média e pior em partes iguais', () => {
-    expect(balanceScore([0.84, 0.8, 0.62, 0.82], 0.5)).toBeCloseTo(0.695)
   })
 
   it('sem participantes devolve 0', () => {
@@ -34,49 +36,67 @@ describe('balanceScore', () => {
 })
 
 describe('summarizeScores', () => {
-  it('aponta média, pior e quem sai pior', () => {
-    const summary = summarizeScores(plans[1].per_member_scores, 0.5)
-    expect(summary.mean).toBeCloseTo(0.775)
-    expect(summary.worst).toBe(0.5)
-    expect(summary.worstMemberIds).toEqual(['m2'])
-    expect(summary.score).toBeCloseTo(0.6375)
+  it('reproduz o score do motor em todos os planos do fixture', () => {
+    for (const engineRound of engineFixture.rounds) {
+      for (const plan of engineRound.plans) {
+        expect(summarizeScores(plan.per_member_scores, plan.alpha).score).toBeCloseTo(plan.score, 3)
+      }
+    }
+  })
+
+  it('aponta média, pior e quem sai pior (Lençóis, com Eva)', () => {
+    const summary = summarizeScores(plans[0].per_member_scores, 0.5)
+    expect(summary.mean).toBeCloseTo(0.6908, 4)
+    expect(summary.worst).toBe(0.4571)
+    expect(summary.worstMemberIds).toEqual(['mem-bruno'])
   })
 
   it('lista todos os empatados com a pior satisfação', () => {
-    const summary = summarizeScores(plans[2].per_member_scores, 0.5)
-    expect(summary.worst).toBe(0.66)
+    const summary = summarizeScores(scores(0.66, 0.5, 0.5), 0.5)
     expect(summary.worstMemberIds).toEqual(['m1', 'm2'])
   })
 
-  it('sem participantes não aponta ninguém', () => {
-    expect(summarizeScores([], 0.5).worstMemberIds).toEqual([])
+  it('ignora quem não declarou preferências na média, no mínimo e no destaque', () => {
+    const withoutPreferences = [...scores(0.8, 0.6), { ...scores(0.1)[0], member_id: 'sem', has_preferences: false }]
+    const summary = summarizeScores(withoutPreferences, 0.5)
+    expect(summary.mean).toBeCloseTo(0.7)
+    expect(summary.worst).toBe(0.6)
+    expect(summary.worstMemberIds).toEqual(['m1'])
+  })
+
+  it('no fixture, Eva sem preferências não conta (rodada eva_limits_only)', () => {
+    const plan = round('eva_limits_only').plans[0]
+    expect(countedScores(plan.per_member_scores).map((item) => item.member_id)).not.toContain('mem-eva')
+    expect(summarizeScores(plan.per_member_scores, plan.alpha).worstMemberIds).toEqual(['mem-bruno'])
+  })
+
+  it('sem ninguém com preferências não aponta ninguém', () => {
+    const nobody = scores(0.5, 0.5).map((item) => ({ ...item, has_preferences: false }))
+    expect(summarizeScores(nobody, 0.5)).toEqual({ mean: 0, worst: 0, worstMemberIds: [], score: 0 })
   })
 })
 
 describe('rankPlans', () => {
   const order = (alpha: number) => rankPlans(plans, alpha).map((plan) => plan.id)
 
-  it('α = 0 favorece a maior média (Jericoacoara)', () => {
-    expect(order(0)).toEqual(['jericoacoara', 'lencois', 'lencois-curto'])
+  it('α = 0,5 mantém a ordem do motor', () => {
+    expect(order(0.5)).toEqual(['lencois', 'lencois-curto', 'paraty-curto'])
   })
 
-  it('α = 0,5 recomenda Lençóis, como o motor', () => {
-    expect(order(0.5)).toEqual(['lencois', 'lencois-curto', 'jericoacoara'])
-  })
-
-  it('α = 1 protege quem sai pior (roteiro curto)', () => {
-    expect(order(1)).toEqual(['lencois-curto', 'lencois', 'jericoacoara'])
+  it('α = 1 protege quem sai pior', () => {
+    // Pior satisfação: Lençóis 0,4571 (Bruno), curto 0,4114 (Bruno), Paraty curto 0,4336 (Carla).
+    expect(order(1)).toEqual(['lencois', 'paraty-curto', 'lencois-curto'])
   })
 
   it('não altera a lista recebida', () => {
     rankPlans(plans, 1)
-    expect(plans.map((plan) => plan.id)).toEqual(['lencois', 'jericoacoara', 'lencois-curto'])
+    expect(plans.map((plan) => plan.id)).toEqual(['lencois', 'lencois-curto', 'paraty-curto'])
   })
 })
 
 describe('toPercent', () => {
   it('arredonda para 0 a 100', () => {
-    expect(toPercent(0.695)).toBe(70)
-    expect(toPercent(0.6375)).toBe(64)
+    expect(toPercent(0.574)).toBe(57)
+    expect(toPercent(0.4571)).toBe(46)
   })
 })

@@ -9,11 +9,20 @@ export type IsoDateTime = string
 
 export type Climate = 'hot' | 'mild' | 'cold'
 
+export type Pace = 'relaxed' | 'balanced' | 'intense'
+
 export interface Destination {
   id: string
   name: string
   state: string
   climate: Climate
+  /** Ritmo do destino, comparado com a preferência de ritmo de cada um. */
+  pace: Pace
+  /** Passagem de ida e volta, por pessoa. */
+  fixed_cost: number
+  /** Hospedagem e gastos por noite, por pessoa. */
+  nightly_cost: number
+  /** fixed_cost + noites × nightly_cost, com as noites da viagem (6 no catálogo). */
   est_cost_per_person: number
   cost_source: string
   tags: string[]
@@ -29,6 +38,8 @@ export interface Trip {
   organizer_id: string
   date_window_start: IsoDate
   date_window_end: IsoDate
+  /** Duração do roteiro padrão; o motor também testa um roteiro curto, com 2 noites a menos. */
+  nights: number
   alpha: number
   status: TripStatus
   created_at: IsoDateTime
@@ -60,6 +71,8 @@ export interface CreateTripInput {
   destination_ids: string[]
   date_window_start: IsoDate
   date_window_end: IsoDate
+  /** Padrão 6. */
+  nights?: number
   alpha?: number
 }
 
@@ -83,23 +96,36 @@ export type HardConstraint =
   | (ConstraintItemBase & { kind: 'exclude_climate'; climates: Climate[] })
   | (ConstraintItemBase & { kind: 'exclude_destination'; destination_ids: string[] })
 
-export type Pace = 'relaxed' | 'balanced' | 'intense'
-
 /** Preferências: entram no cálculo de satisfação com um peso de 0 a 1. */
 export type SoftConstraint =
   | (ConstraintItemBase & { kind: 'pace'; pace: Pace; weight: number })
   | (ConstraintItemBase & { kind: 'prefer_climate'; climates: Climate[]; weight: number })
+  /** Em ordem de preferência: o primeiro é o escolhido, e o resumo diz "Jericoacoara, depois Paraty". */
   | (ConstraintItemBase & { kind: 'prefer_destination'; destination_ids: string[]; weight: number })
   | (ConstraintItemBase & { kind: 'prefer_tags'; tags: string[]; weight: number })
 
-/**
- * Corpo de PUT /invite/{token}/constraints e resposta de
- * POST /invite/{token}/constraints/parse (que não salva nada).
- */
+/** Corpo de PUT /invite/{token}/constraints. */
 export interface ConstraintsInput {
   raw_text: string
   hard: HardConstraint[]
   soft: SoftConstraint[]
+}
+
+export type LimitKind = HardConstraint['kind']
+
+/**
+ * Um limite da própria pessoa e os destinos da viagem que ele elimina sozinho
+ * (nenhum roteiro do destino o respeita). Só para a tela dela, nunca para o grupo.
+ */
+export interface MemberLimit {
+  constraint_id: string
+  kind: LimitKind
+  eliminated_destination_ids: string[]
+}
+
+/** Resposta de POST /invite/{token}/constraints/parse. */
+export interface ParsedConstraints extends ConstraintsInput {
+  member_limits: MemberLimit[]
 }
 
 export interface Constraints extends ConstraintsInput {
@@ -119,20 +145,26 @@ export interface Invite {
   members: GroupMember[]
   destinations: Destination[]
   constraints: Constraints | null
+  /** O que os limites salvos desta pessoa eliminam; vazio sem restrições salvas. */
+  member_limits: MemberLimit[]
   /** Rodada de planos mais recente; nulo se o motor ainda não rodou. */
   latest_round: number | null
 }
 
 // Tensões
 
-export type TensionCriterion = 'budget' | 'climate' | 'dates' | 'pace'
+/**
+ * Orçamento não é critério de aresta: um conflito de orçamento identificaria
+ * quem tem o limite. O que um orçamento elimina aparece em key_constraints, sem nome.
+ */
+export type TensionCriterion = 'climate' | 'dates' | 'pace'
 
 /** Par de participantes que já responderam. */
 export interface MemberPair {
   member_a_id: string
   member_b_id: string
   status: 'compatible' | 'conflict'
-  /** Critério principal do conflito; nulo quando o par é compatível. */
+  /** Critério principal do conflito (datas, clima, ritmo, nessa ordem); nulo quando o par é compatível. */
   criterion: TensionCriterion | null
 }
 
@@ -166,6 +198,10 @@ export interface MemberScore {
   member_id: string
   /** Satisfação de 0 a 1. */
   score: number
+  /** Falso para quem não declarou nenhuma preferência: fica fora da média e do mínimo. */
+  has_preferences: boolean
+  /** Maior satisfação que a pessoa teria em qualquer alternativa que respeita os limites do grupo. */
+  best_possible: number
 }
 
 export interface MemberExplanation {
@@ -195,12 +231,53 @@ export interface Plan {
   explanation: MemberExplanation[]
 }
 
-/** GET /trips/{id}/plans?round=n e POST /trips/{id}/plans */
-export interface PlanRound {
+/**
+ * Limite como o grupo vê: só o tipo e de quem. O de orçamento não identifica
+ * ninguém (member_id nulo) e nunca traz o valor.
+ */
+export interface LimitRef {
+  member_id: string | null
+  kind: LimitKind
+}
+
+export interface ExcludedDestination {
+  destination_id: string
+  /** limit: nenhuma alternativa do destino respeita os limites; lower_score: viável, com score menor. */
+  reason: 'limit' | 'lower_score'
+  /** Limites que eliminam o destino; vazio quando o motivo é score menor. */
+  limits: LimitRef[]
+  /** Melhor score do destino; nulo quando o motivo é limite. */
+  best_score: number | null
+}
+
+/** Só em rodada sem plano viável: um limite que elimina alternativas. */
+export interface BlockingLimit extends LimitRef {
+  /** Quantas alternativas (destino × variante × dia de ida) este limite elimina. */
+  eliminated_candidates: number
+}
+
+/**
+ * Tabela plan_rounds: o que é da rodada e não de um plano. Existe mesmo quando
+ * nada é viável e a rodada não tem planos.
+ */
+export interface PlanRoundRecord {
   trip_id: string
   round: number
-  /** Ordenados do maior para o menor score. */
+  /** α usado pelo motor nesta rodada. */
+  alpha: number
+  alternatives_evaluated: number
+  /** Destinos da viagem que não aparecem em nenhum plano da rodada. */
+  excluded_destinations: ExcludedDestination[]
+  /** Vazio quando a rodada tem planos. */
+  blocking_limits: BlockingLimit[]
+  created_at: IsoDateTime
+}
+
+/** GET /trips/{id}/plans?round=n e POST /trips/{id}/plans */
+export interface PlanRound extends PlanRoundRecord {
+  /** Ordenados do maior para o menor score. Vazio quando nada respeita os limites de todos. */
   plans: Plan[]
+  /** Nulo quando a rodada não tem planos. */
   recommended_plan_id: string | null
   /**
    * Reações aos planos da rodada. O organizador recebe todas; na API real, o

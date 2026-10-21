@@ -5,7 +5,7 @@ import { Button } from '../../components/button'
 import { buttonVariants } from '../../components/button-styles'
 import { getErrorMessage, parseConstraints, saveConstraints } from '../../lib/api'
 import { formatCount, formatDateRange } from '../../lib/format'
-import type { Constraints, ConstraintsInput, Invite } from '../../types/api'
+import type { Constraints, ConstraintsInput, Invite, MemberLimit } from '../../types/api'
 import { AlertMessage } from '../../components/alert-message'
 import { ConstraintList } from './constraint-list'
 import { ConstraintNotes } from './constraint-notes'
@@ -23,6 +23,8 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
   const [interpretation, setInterpretation] = useState<ConstraintsInput | null>(null)
   const [saved, setSaved] = useState<Constraints | null>(invite.constraints)
   const [isSent, setIsSent] = useState(invite.constraints !== null)
+  // O que os limites desta pessoa eliminam: vem da interpretação e das restrições salvas.
+  const [limits, setLimits] = useState<MemberLimit[]>(invite.member_limits)
 
   const [isParsing, setIsParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
@@ -76,8 +78,9 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
     setSaveError(null)
     setAnnouncement('Interpretando sua resposta…')
     try {
-      const result = await parseConstraints(token, text)
+      const { member_limits: parsedLimits, ...result } = await parseConstraints(token, text)
       setInterpretation(result)
+      setLimits(parsedLimits)
       setAnnouncement('Interpretação pronta. Revise os itens antes de enviar.')
       pendingFocus.current = 'interpretation'
     } catch (error) {
@@ -159,7 +162,7 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
               Obrigado, {member.display_name}. Suas condições já entram no cálculo do grupo. Quando os planos forem
               gerados, você poderá ver o resultado e reagir por este mesmo link.
             </p>
-            <ConstraintList constraints={saved} />
+            <ConstraintList constraints={saved} limits={limits} destinations={destinations} />
             <ConstraintNotes hasBudget={saved.hard.some((item) => item.kind === 'budget')} />
           </section>
         ) : (
@@ -213,7 +216,12 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
                 )}
 
                 {itemCount > 0 ? (
-                  <ConstraintList constraints={interpretation} onRemove={handleRemove} />
+                  <ConstraintList
+                    constraints={interpretation}
+                    limits={limits}
+                    destinations={destinations}
+                    onRemove={handleRemove}
+                  />
                 ) : (
                   <p className="text-[13px] leading-normal text-ink-soft">
                     Você removeu todos os itens. Ajuste o texto e interprete novamente.
