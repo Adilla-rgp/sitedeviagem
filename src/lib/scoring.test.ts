@@ -38,8 +38,18 @@ describe('summarizeScores', () => {
     const summary = summarizeScores(plans[1].per_member_scores, 0.5)
     expect(summary.mean).toBeCloseTo(0.775)
     expect(summary.worst).toBe(0.5)
-    expect(summary.worstMemberId).toBe('m2')
+    expect(summary.worstMemberIds).toEqual(['m2'])
     expect(summary.score).toBeCloseTo(0.6375)
+  })
+
+  it('lista todos os empatados com a pior satisfação', () => {
+    const summary = summarizeScores(plans[2].per_member_scores, 0.5)
+    expect(summary.worst).toBe(0.66)
+    expect(summary.worstMemberIds).toEqual(['m1', 'm2'])
+  })
+
+  it('sem participantes não aponta ninguém', () => {
+    expect(summarizeScores([], 0.5).worstMemberIds).toEqual([])
   })
 })
 

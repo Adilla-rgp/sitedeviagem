@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { Button } from '../../components/button'
 import { formatCurrency, formatDateRange, formatDecimal } from '../../lib/format'
-import { memberName, planTitle } from '../../lib/plans'
+import { memberNames, planTitle } from '../../lib/plans'
 import { rankPlans, toPercent } from '../../lib/scoring'
 import type { Destination, Member, PlanRound } from '../../types/api'
 
@@ -103,8 +103,8 @@ export function BalancePanel({ round, destinations, members, alpha, onAlphaChang
                   {formatDateRange(plan.start_date, plan.end_date)} · {formatCurrency(plan.est_cost_per_person)}
                 </span>
                 <span className="text-xs text-ink-muted">
-                  média {toPercent(plan.simulated.mean)} · pior {toPercent(plan.simulated.worst)} (
-                  {memberName(members, plan.simulated.worstMemberId ?? '')})
+                  média {toPercent(plan.simulated.mean)} · pior {toPercent(plan.simulated.worst)}:{' '}
+                  {memberNames(members, plan.simulated.worstMemberIds)}
                 </span>
                 {isRecommended && (
                   <span className="mt-1 self-start font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-accent-soft">

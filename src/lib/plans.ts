@@ -1,4 +1,5 @@
 import type { Destination, GroupMember, Plan, Reaction, Verdict } from '../types/api'
+import { formatList } from './format'
 
 /** "Lençóis Maranhenses" ou "Lençóis Maranhenses, roteiro curto". */
 export function planTitle(plan: Plan, destinations: Destination[]): string {
@@ -26,4 +27,9 @@ export function reactionOf(reactions: Reaction[], planId: string, memberId: stri
 
 export function memberName(members: GroupMember[], memberId: string): string {
   return members.find((member) => member.id === memberId)?.display_name ?? ''
+}
+
+/** "Carla" ou "Bruno e Carla". */
+export function memberNames(members: GroupMember[], memberIds: string[]): string {
+  return formatList(memberIds.map((id) => memberName(members, id)))
 }

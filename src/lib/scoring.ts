@@ -9,10 +9,13 @@ import type { MemberScore } from '../types/api'
 export interface ScoreSummary {
   mean: number
   worst: number
-  /** Quem tem a menor satisfação (o primeiro, em caso de empate). */
-  worstMemberId: string | null
+  /** Todos com a menor satisfação, na ordem recebida (mais de um em caso de empate). */
+  worstMemberIds: string[]
   score: number
 }
+
+/** Diferença abaixo da qual duas satisfações contam como empate. */
+const TIE_TOLERANCE = 1e-9
 
 export function balanceScore(memberScores: number[], alpha: number): number {
   if (alpha < 0 || alpha > 1 || Number.isNaN(alpha)) {
@@ -25,13 +28,15 @@ export function balanceScore(memberScores: number[], alpha: number): number {
 
 export function summarizeScores(memberScores: MemberScore[], alpha: number): ScoreSummary {
   const values = memberScores.map((item) => item.score)
-  if (values.length === 0) return { mean: 0, worst: 0, worstMemberId: null, score: 0 }
+  if (values.length === 0) return { mean: 0, worst: 0, worstMemberIds: [], score: 0 }
 
-  const worst = memberScores.reduce((lowest, item) => (item.score < lowest.score ? item : lowest))
+  const worst = Math.min(...values)
   return {
     mean: values.reduce((sum, value) => sum + value, 0) / values.length,
-    worst: worst.score,
-    worstMemberId: worst.member_id,
+    worst,
+    worstMemberIds: memberScores
+      .filter((item) => item.score - worst < TIE_TOLERANCE)
+      .map((item) => item.member_id),
     score: balanceScore(values, alpha),
   }
 }

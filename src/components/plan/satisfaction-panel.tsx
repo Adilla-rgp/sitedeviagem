@@ -1,4 +1,4 @@
-import { memberName } from '../../lib/plans'
+import { memberName, memberNames } from '../../lib/plans'
 import { summarizeScores, toPercent } from '../../lib/scoring'
 import type { GroupMember, Plan } from '../../types/api'
 
@@ -22,12 +22,13 @@ export function SatisfactionPanel({ plan, members, viewerId }: SatisfactionPanel
           Satisfação por participante
         </h2>
         <span className="text-xs text-ink-muted">
-          0 a 100 · média {toPercent(summary.mean)} · pior {toPercent(summary.worst)}
+          0 a 100 · média {toPercent(summary.mean)} · pior {toPercent(summary.worst)}:{' '}
+          {memberNames(members, summary.worstMemberIds)}
         </span>
       </div>
       <ul className="flex flex-col gap-3">
         {plan.per_member_scores.map((item) => {
-          const isWorst = item.member_id === summary.worstMemberId
+          const isWorst = summary.worstMemberIds.includes(item.member_id)
           const value = toPercent(item.score)
           return (
             <li key={item.member_id} className="grid grid-cols-[88px_minmax(0,1fr)_40px] items-center gap-3">
@@ -50,7 +51,9 @@ export function SatisfactionPanel({ plan, members, viewerId }: SatisfactionPanel
         })}
       </ul>
       <p className="text-xs text-warn">
-        Destacado: o participante com menor satisfação, que o critério de equilíbrio protege.
+        {summary.worstMemberIds.length > 1
+          ? 'Em destaque: quem empata com a menor satisfação, que o critério de equilíbrio protege.'
+          : 'Destacado: o participante com menor satisfação, que o critério de equilíbrio protege.'}
       </p>
     </section>
   )
