@@ -106,7 +106,7 @@ Os tipos exatos estão em `src/types/api.ts`. Detalhes acrescentados durante a i
   - `pairs`: cada par de participantes com `status` (`compatible` ou `conflict`) e, no conflito, o `criterion` principal (`dates`, `budget`, `climate` ou `pace`, nessa ordem de prioridade);
   - `key_constraints`: as principais restrições, cada uma com `id` e `summary`;
   - `viability`: para cada destino, `accepted_count` de `responded_count`;
-  - `most_restrictive_member_id`: quem tem mais limites, quando há um só.
+  - `most_restrictive_member_id`: quem tem pelo menos 2 limites e estritamente mais que todos os outros (nulo se ninguém).
 - **Regras de conflito do mapa:** datas, quando dois limites de data têm menos de 4 dias em comum; orçamento ou clima, quando o limite de um elimina um destino que o outro prefere; ritmo, quando um prefere tranquilo e outro agitado, ambos com peso de pelo menos 0,8.
 
 ## Roadmap

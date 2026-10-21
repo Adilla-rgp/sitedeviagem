@@ -20,6 +20,8 @@ import type {
 const MIN_COMMON_DAYS = 4
 /** Só preferências de ritmo fortes (peso a partir disso) geram conflito. */
 const STRONG_PREFERENCE_WEIGHT = 0.8
+/** Mínimo de limites para alguém ser destacado como quem tem "mais limites". */
+const MIN_LIMITS_FOR_MOST_RESTRICTIVE = 2
 /** Ordem de prioridade quando um par conflita em mais de um critério. */
 const CRITERION_PRIORITY: TensionCriterion[] = ['dates', 'budget', 'climate', 'pace']
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -147,10 +149,11 @@ function buildPairs(respondents: Respondent[], destinations: Destination[]): Mem
   return pairs
 }
 
+/** Quem tem pelo menos 2 limites e estritamente mais que todos os outros. */
 function findMostRestrictive(respondents: Respondent[]): string | null {
   const counts = respondents.map((person) => person.hard.length)
   const max = Math.max(0, ...counts)
-  if (max === 0 || counts.filter((count) => count === max).length > 1) return null
+  if (max < MIN_LIMITS_FOR_MOST_RESTRICTIVE || counts.filter((count) => count === max).length > 1) return null
   return respondents[counts.indexOf(max)].member.id
 }
 
