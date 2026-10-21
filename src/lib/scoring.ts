@@ -5,6 +5,9 @@ import type { MemberScore } from '../types/api'
 // efeito de outro α. A fórmula é a da especificação:
 //
 //   score(p) = (1 − α) · média(s_i(p)) + α · min(s_i(p))
+//
+// Como no motor, quem não declarou preferências (has_preferences = false) fica
+// fora da média, do mínimo e do destaque de quem sai pior.
 
 export interface ScoreSummary {
   mean: number
@@ -12,6 +15,11 @@ export interface ScoreSummary {
   /** Todos com a menor satisfação, na ordem recebida (mais de um em caso de empate). */
   worstMemberIds: string[]
   score: number
+}
+
+/** Quem entra no score: só quem declarou preferências. */
+export function countedScores(memberScores: MemberScore[]): MemberScore[] {
+  return memberScores.filter((item) => item.has_preferences)
 }
 
 /** Diferença abaixo da qual duas satisfações contam como empate. */
@@ -27,14 +35,15 @@ export function balanceScore(memberScores: number[], alpha: number): number {
 }
 
 export function summarizeScores(memberScores: MemberScore[], alpha: number): ScoreSummary {
-  const values = memberScores.map((item) => item.score)
+  const counted = countedScores(memberScores)
+  const values = counted.map((item) => item.score)
   if (values.length === 0) return { mean: 0, worst: 0, worstMemberIds: [], score: 0 }
 
   const worst = Math.min(...values)
   return {
     mean: values.reduce((sum, value) => sum + value, 0) / values.length,
     worst,
-    worstMemberIds: memberScores
+    worstMemberIds: counted
       .filter((item) => item.score - worst < TIE_TOLERANCE)
       .map((item) => item.member_id),
     score: balanceScore(values, alpha),
