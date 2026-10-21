@@ -1,42 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { formatList } from '../../lib/format'
 import type { Member, TripTensions } from '../../types/api'
+import { computeMapLayout } from './map-layout'
 import { conflictPairs, CRITERION_LABEL, nameOf } from './tension-utils'
 
-// Geometria em unidades do viewBox; o SVG escala com a largura disponível.
-const VIEW_WIDTH = 400
-const VIEW_HEIGHT = 380
-const CENTER_X = 200
-const CENTER_Y = 192
-const RING_RADIUS = 128
-const NODE_RADIUS = 26
-/** Largura de referência para o primeiro render, antes da medição. */
-const DEFAULT_RENDERED_WIDTH = 480
-
-// Textos em pixels reais: convertidos para unidades do viewBox pela escala
-// atual, para continuarem legíveis quando o desenho encolhe no celular.
-const LABEL_PX = 13
-const INITIAL_PX = 20
-const PILL_FONT_PX = 12
-const PILL_HEIGHT_PX = 22
-/** Largura média de um caractere em relação ao tamanho da fonte (estimativa). */
-const CHAR_WIDTH_RATIO = 0.56
-
-interface Point {
-  x: number
-  y: number
-}
-
-function nodePosition(index: number, total: number): Point & { isUpper: boolean } {
-  if (total === 1) return { x: CENTER_X, y: CENTER_Y, isUpper: false }
-  // Primeiro participante no topo, os demais em sentido horário.
-  const angle = -Math.PI / 2 + (index * 2 * Math.PI) / total
-  return {
-    x: CENTER_X + RING_RADIUS * Math.cos(angle),
-    y: CENTER_Y + RING_RADIUS * Math.sin(angle),
-    isUpper: Math.sin(angle) < -0.1,
-  }
-}
+/** Largura usada no primeiro render, antes da medição. */
+const DEFAULT_WIDTH = 480
 
 function describeMap(members: Member[], tensions: TripTensions): string {
   const conflicts = conflictPairs(tensions)
@@ -60,53 +29,43 @@ function describeMap(members: Member[], tensions: TripTensions): string {
   return parts.join(' ')
 }
 
-interface TensionMapProps {
-  members: Member[]
-  tensions: TripTensions
-}
-
-/** Unidades do viewBox por pixel renderizado. */
-function useViewBoxScale() {
+function useRenderedWidth() {
   const ref = useRef<SVGSVGElement>(null)
-  const [width, setWidth] = useState(DEFAULT_RENDERED_WIDTH)
+  const [width, setWidth] = useState(DEFAULT_WIDTH)
 
   useEffect(() => {
     const element = ref.current
     if (!element) return
     const observer = new ResizeObserver(([entry]) => {
-      if (entry.contentRect.width > 0) setWidth(entry.contentRect.width)
+      if (entry.contentRect.width > 0) setWidth(Math.round(entry.contentRect.width))
     })
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
 
-  return { ref, scale: VIEW_WIDTH / width }
+  return { ref, width }
 }
 
-/** Centraliza um texto em x sem deixar que ele saia do viewBox. */
-function clampTextX(x: number, text: string, fontSize: number): number {
-  const half = (text.length * fontSize * CHAR_WIDTH_RATIO) / 2
-  return Math.min(Math.max(x, half), VIEW_WIDTH - half)
+interface TensionMapProps {
+  members: Member[]
+  tensions: TripTensions
 }
 
 export function TensionMap({ members, tensions }: TensionMapProps) {
   const titleId = useId()
-  const { ref: svgRef, scale } = useViewBoxScale()
-  const labelSize = LABEL_PX * scale
-  const initialSize = Math.min(INITIAL_PX * scale, NODE_RADIUS * 0.9)
-  const pillFontSize = PILL_FONT_PX * scale
-  const pillHeight = PILL_HEIGHT_PX * scale
-  const positions = new Map(members.map((member, index) => [member.id, nodePosition(index, members.length)]))
+  const { ref: svgRef, width } = useRenderedWidth()
+  const layout = computeMapLayout(members, tensions, width)
+  const positions = new Map(layout.nodes.map((node) => [node.member.id, node]))
   const conflicts = conflictPairs(tensions)
 
   return (
     <div className="flex flex-col gap-4">
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+        viewBox={layout.viewBox}
         role="img"
         aria-labelledby={titleId}
-        className="mx-auto block h-auto w-full max-w-[480px]"
+        className="mx-auto block h-auto w-full max-w-[560px]"
       >
         <title id={titleId}>{describeMap(members, tensions)}</title>
 
@@ -129,91 +88,79 @@ export function TensionMap({ members, tensions }: TensionMapProps) {
           )
         })}
 
-        {conflicts.map((pair) => {
-          const a = positions.get(pair.member_a_id)
-          const b = positions.get(pair.member_b_id)
-          if (!a || !b) return null
-          const label = CRITERION_LABEL[pair.criterion]
-          const width = label.length * pillFontSize * CHAR_WIDTH_RATIO + pillFontSize * 1.4
-          const x = (a.x + b.x) / 2
-          const y = (a.y + b.y) / 2
-          return (
-            <g key={`label-${pair.member_a_id}-${pair.member_b_id}`}>
-              <rect
-                x={x - width / 2}
-                y={y - pillHeight / 2}
-                width={width}
-                height={pillHeight}
-                rx={pillHeight / 2}
-                className="fill-warn-bg stroke-warn-line"
-              />
-              <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fontSize={pillFontSize} className="fill-warn">
-                {label}
-              </text>
-            </g>
-          )
-        })}
+        {layout.nodes.map((node) => (
+          <g key={node.member.id}>
+            <circle
+              cx={node.x}
+              cy={node.y}
+              r={layout.nodeRadius}
+              strokeWidth={2}
+              strokeDasharray={node.responded ? undefined : '5 4'}
+              className={
+                !node.responded
+                  ? 'fill-bg stroke-neutral-link'
+                  : node.isMostRestrictive
+                    ? 'fill-warn-bg stroke-warn'
+                    : 'fill-surface-raised stroke-neutral-link'
+              }
+            />
+            <text
+              x={node.x}
+              y={node.y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={Math.round(layout.nodeRadius * 0.72)}
+              fontWeight={600}
+              className={node.responded ? 'fill-ink' : 'fill-ink-muted'}
+              aria-hidden="true"
+            >
+              {node.member.display_name.charAt(0).toUpperCase()}
+            </text>
+            <text
+              x={node.label.x}
+              textAnchor={node.label.anchor}
+              className={node.responded ? 'fill-ink' : 'fill-ink-muted'}
+            >
+              <tspan x={node.label.x} y={node.label.nameY} fontSize={layout.nameFontSize}>
+                {node.member.display_name}
+                {node.member.is_organizer && <tspan className="fill-ink-muted"> · você</tspan>}
+              </tspan>
+              {node.label.status && node.label.statusY !== null && (
+                <tspan
+                  x={node.label.x}
+                  y={node.label.statusY}
+                  fontSize={layout.statusFontSize}
+                  className={node.label.status === 'mais limites' ? 'fill-warn' : 'fill-ink-muted'}
+                >
+                  {node.label.status}
+                </tspan>
+              )}
+            </text>
+          </g>
+        ))}
 
-        {members.map((member) => {
-          const position = positions.get(member.id)
-          if (!position) return null
-          const responded = member.responded_at !== null
-          const isMostRestrictive = member.id === tensions.most_restrictive_member_id
-          const labelY = position.isUpper
-            ? position.y - NODE_RADIUS - labelSize * 0.6
-            : position.y + NODE_RADIUS + labelSize * 1.3
-          const labelText = [
-            member.display_name,
-            member.is_organizer && ' · você',
-            isMostRestrictive && ' · mais limites',
-            !responded && ' · aguardando',
-          ]
-            .filter(Boolean)
-            .join('')
-
-          return (
-            <g key={member.id}>
-              <circle
-                cx={position.x}
-                cy={position.y}
-                r={NODE_RADIUS}
-                strokeWidth={2}
-                strokeDasharray={responded ? undefined : '5 4'}
-                className={
-                  !responded
-                    ? 'fill-bg stroke-neutral-link'
-                    : isMostRestrictive
-                      ? 'fill-warn-bg stroke-warn'
-                      : 'fill-surface-raised stroke-neutral-link'
-                }
-              />
-              <text
-                x={position.x}
-                y={position.y}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize={initialSize}
-                fontWeight={600}
-                className={responded ? 'fill-ink' : 'fill-ink-muted'}
-                aria-hidden="true"
-              >
-                {member.display_name.charAt(0).toUpperCase()}
-              </text>
-              <text
-                x={clampTextX(position.x, labelText, labelSize)}
-                y={labelY}
-                textAnchor="middle"
-                fontSize={labelSize}
-                className={responded ? 'fill-ink' : 'fill-ink-muted'}
-              >
-                {member.display_name}
-                {member.is_organizer && <tspan className="fill-ink-muted"> · você</tspan>}
-                {isMostRestrictive && <tspan className="fill-warn"> · mais limites</tspan>}
-                {!responded && ' · aguardando'}
-              </text>
-            </g>
-          )
-        })}
+        {layout.pills.map((pill) => (
+          <g key={pill.key}>
+            <rect
+              x={pill.x - pill.width / 2}
+              y={pill.y - layout.pillHeight / 2}
+              width={pill.width}
+              height={layout.pillHeight}
+              rx={layout.pillHeight / 2}
+              className="fill-warn-bg stroke-warn-line"
+            />
+            <text
+              x={pill.x}
+              y={pill.y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize={layout.pillFontSize}
+              className="fill-warn"
+            >
+              {pill.text}
+            </text>
+          </g>
+        ))}
       </svg>
 
       <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-ink-muted" aria-hidden="true">
