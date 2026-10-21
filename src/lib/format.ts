@@ -24,6 +24,12 @@ export function formatDateRange(start: IsoDate, end: IsoDate): string {
   return `${formatDay(startDate)} de ${monthFormatter.format(startDate)} a ${formatDay(endDate)} de ${endMonth}`
 }
 
+/** "Eva", "Eva e Diego", "Ana, Eva e Diego". */
+export function formatList(items: string[]): string {
+  if (items.length <= 1) return items.join('')
+  return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`
+}
+
 /** "1 pessoa", "5 pessoas". */
 export function formatCount(count: number, singular: string, plural: string): string {
   return `${count} ${count === 1 ? singular : plural}`
