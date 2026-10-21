@@ -15,8 +15,7 @@ import type {
   TripTensions,
 } from '../types/api'
 import { db, nextId, persistDb } from '../mocks/store'
-import { scorePlan } from '../mocks/engine'
-import { roundOnePlans } from '../mocks/plans'
+import { ENGINE_ALPHA, roundOnePlans } from '../mocks/plans'
 import { computeTensions } from '../mocks/tensions'
 import { sampleInterpretation } from '../mocks/trip-july'
 
@@ -26,6 +25,7 @@ import { sampleInterpretation } from '../mocks/trip-july'
 
 const MOCK_LATENCY_MS = 700
 const MIN_RAW_TEXT_LENGTH = 10
+const MIN_REACTION_COMMENT_LENGTH = 3
 
 export class ApiError extends Error {
   readonly status: number
@@ -84,17 +84,24 @@ function latestConstraints(memberId: string): Constraints | null {
   return versions.reduce((latest, item) => (item.version > latest.version ? item : latest))
 }
 
+function latestRound(tripId: string): number | null {
+  const rounds = db.plans.filter((plan) => plan.trip_id === tripId).map((plan) => plan.round)
+  return rounds.length > 0 ? Math.max(...rounds) : null
+}
+
 function buildRound(tripId: string, round: number): PlanRound {
-  const trip = findTrip(tripId)
+  findTrip(tripId)
   const plans = db.plans
     .filter((plan) => plan.trip_id === tripId && plan.round === round)
     .sort((a, b) => b.score - a.score)
+  if (plans.length === 0) throw new ApiError(404, 'Rodada não encontrada.')
+  const planIds = plans.map((plan) => plan.id)
   return {
     trip_id: tripId,
     round,
-    alpha: trip.alpha,
     plans,
-    recommended_plan_id: plans[0]?.id ?? null,
+    recommended_plan_id: plans[0].id,
+    reactions: db.reactions.filter((reaction) => planIds.includes(reaction.plan_id)),
   }
 }
 
@@ -138,6 +145,7 @@ export function getTrip(tripId: string): Promise<TripDetail> {
     ...findTrip(tripId),
     destinations: tripDestinations(tripId),
     members: db.members.filter((member) => member.trip_id === tripId),
+    latest_round: latestRound(tripId),
   }))
 }
 
@@ -174,6 +182,7 @@ export function getInvite(token: string): Promise<Invite> {
       member_count: tripMembers.length,
       destinations: tripDestinations(trip.id),
       constraints: latestConstraints(member.id),
+      latest_round: latestRound(trip.id),
     }
   })
 }
@@ -223,20 +232,26 @@ export function getTripTensions(tripId: string): Promise<TripTensions> {
   })
 }
 
-/** POST /trips/{id}/plans — roda o motor e gera uma nova rodada. */
+/**
+ * POST /trips/{id}/plans — roda o motor e gera uma nova rodada.
+ * O front não tem motor: o mock devolve sempre as alternativas da rodada 1 da
+ * referência visual, com o número da rodada seguinte.
+ */
 export function generatePlans(tripId: string): Promise<PlanRound> {
   return respond(() => {
     const trip = findTrip(tripId)
-    const round = Math.max(0, ...db.plans.filter((plan) => plan.trip_id === tripId).map((plan) => plan.round)) + 1
+    const responded = db.members.filter((member) => member.trip_id === tripId && member.responded_at).length
+    if (responded < 2) throw new ApiError(422, 'São necessárias pelo menos 2 respostas para gerar planos.')
+
+    const round = (latestRound(tripId) ?? 0) + 1
     const plans = roundOnePlans.map<Plan>((seed) => ({
       ...seed,
       id: nextId('plan'),
       trip_id: tripId,
       round,
-      score: scorePlan(
-        seed.per_member_scores.map((item) => item.score),
-        trip.alpha,
-      ),
+      alpha: ENGINE_ALPHA,
+      alternatives_evaluated: roundOnePlans.length,
+      violated_limits: 0,
     }))
     db.plans.push(...plans)
     trip.status = 'planned'
@@ -249,18 +264,30 @@ export function getPlans(tripId: string, round: number): Promise<PlanRound> {
   return respond(() => buildRound(tripId, round))
 }
 
-/** POST /plans/{id}/reactions */
+/** POST /plans/{id}/reactions — cria ou substitui a reação do convidado ao plano. */
 export function createReaction(planId: string, input: CreateReactionInput): Promise<Reaction> {
   return respond(() => {
     const member = findMemberByToken(input.invite_token)
-    if (!db.plans.some((plan) => plan.id === planId)) throw new ApiError(404, 'Plano não encontrado.')
+    const plan = db.plans.find((item) => item.id === planId)
+    if (!plan || plan.trip_id !== member.trip_id) throw new ApiError(404, 'Plano não encontrado.')
+
+    const comment = input.comment?.trim() || null
+    if (input.verdict !== 'accepted' && (comment?.length ?? 0) < MIN_REACTION_COMMENT_LENGTH) {
+      throw new ApiError(
+        422,
+        input.verdict === 'rejected' ? 'Conte o motivo da recusa.' : 'Conte qual é a sua ressalva.',
+      )
+    }
+
     const reaction: Reaction = {
       id: nextId('react'),
       plan_id: planId,
       member_id: member.id,
       verdict: input.verdict,
-      comment: input.comment ?? null,
+      comment: input.verdict === 'accepted' ? null : comment,
+      reacted_at: now(),
     }
+    db.reactions = db.reactions.filter((item) => !(item.plan_id === planId && item.member_id === member.id))
     db.reactions.push(reaction)
     return reaction
   })

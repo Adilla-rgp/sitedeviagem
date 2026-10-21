@@ -7,7 +7,7 @@ import { constraints, members, trip, tripDestinationIds } from './trip-july'
 // recarregar a página ou abrir outra aba. Para voltar ao estado inicial, abra
 // qualquer página com ?reset-mocks no endereço.
 
-const STORAGE_KEY = 'mock-db:v1'
+const STORAGE_KEY = 'mock-db:v2'
 const RESET_PARAM = 'reset-mocks'
 
 interface MockDb {

@@ -47,6 +47,8 @@ export interface Member {
 export interface TripDetail extends Trip {
   destinations: Destination[]
   members: Member[]
+  /** Rodada de planos mais recente; nulo se o motor ainda não rodou. */
+  latest_round: number | null
 }
 
 /** POST /trips */
@@ -112,6 +114,8 @@ export interface Invite {
   member_count: number
   destinations: Destination[]
   constraints: Constraints | null
+  /** Rodada de planos mais recente; nulo se o motor ainda não rodou. */
+  latest_round: number | null
 }
 
 // Tensões
@@ -174,7 +178,14 @@ export interface Plan {
   start_date: IsoDate
   end_date: IsoDate
   est_cost_per_person: number
+  /** Score calculado pelo motor com o α abaixo. */
   score: number
+  /** α usado pelo motor nesta rodada. */
+  alpha: number
+  /** Quantas alternativas o motor avaliou na rodada. */
+  alternatives_evaluated: number
+  /** Limites violados pelo plano. O motor só devolve planos com zero. */
+  violated_limits: number
   per_member_scores: MemberScore[]
   explanation: MemberExplanation[]
 }
@@ -183,10 +194,14 @@ export interface Plan {
 export interface PlanRound {
   trip_id: string
   round: number
-  alpha: number
   /** Ordenados do maior para o menor score. */
   plans: Plan[]
   recommended_plan_id: string | null
+  /**
+   * Reações aos planos da rodada. O organizador recebe todas; na API real, o
+   * convidado recebe só a própria.
+   */
+  reactions: Reaction[]
 }
 
 // Reações
@@ -199,9 +214,14 @@ export interface Reaction {
   member_id: string
   verdict: Verdict
   comment: string | null
+  reacted_at: IsoDateTime
 }
 
-/** POST /plans/{id}/reactions. O convidado se identifica pelo token do convite. */
+/**
+ * POST /plans/{id}/reactions. O convidado se identifica pelo token do convite.
+ * Reagir de novo ao mesmo plano substitui a reação anterior. O comentário é
+ * obrigatório em "aceito com ressalva" e "recuso".
+ */
 export interface CreateReactionInput {
   invite_token: string
   verdict: Verdict
