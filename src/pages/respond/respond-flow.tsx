@@ -1,6 +1,8 @@
 import { CircleCheck, LoaderCircle } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../../components/button'
+import { buttonVariants } from '../../components/button-styles'
 import { getErrorMessage, parseConstraints, saveConstraints } from '../../lib/api'
 import { formatCount, formatDateRange } from '../../lib/format'
 import type { Constraints, ConstraintsInput, Invite } from '../../types/api'
@@ -228,9 +230,16 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
 
         <div className="mt-auto flex flex-col gap-2.5">
           {isSent ? (
-            <Button variant="secondary" size="md" block onClick={handleEditResponse}>
-              Alterar resposta
-            </Button>
+            <>
+              {invite.latest_round !== null && (
+                <Link to={`/convite/${token}/plano`} className={buttonVariants({ size: 'lg', block: true, className: 'hover:bg-accent-soft' })}>
+                  Ver o plano recomendado
+                </Link>
+              )}
+              <Button variant="secondary" size="md" block onClick={handleEditResponse}>
+                Alterar resposta
+              </Button>
+            </>
           ) : canConfirm ? (
             <Button size="lg" block disabled={isSaving} onClick={handleConfirm}>
               {isSaving && <LoaderCircle className="size-5 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
