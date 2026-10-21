@@ -38,7 +38,7 @@ export function RespondPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 px-5 pb-6 pt-5">
+    <div className="mx-auto flex flex-1 w-full max-w-md flex-col gap-5 px-5 pb-6 pt-5">
       <InviteHeader />
       <main className="flex flex-col gap-5">
         {state.status === 'loading' ? (

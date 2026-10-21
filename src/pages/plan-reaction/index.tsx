@@ -48,7 +48,7 @@ export function PlanReactionPage() {
   }, [token, attempt])
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-5 pb-8 pt-5">
+    <div className="mx-auto flex flex-1 w-full max-w-2xl flex-col gap-5 px-5 pb-8 pt-5">
       <header>
         <BrandMark />
       </header>

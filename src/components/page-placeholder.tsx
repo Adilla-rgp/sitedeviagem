@@ -10,7 +10,7 @@ export function PagePlaceholder({ title, description }: PagePlaceholderProps) {
   useDocumentTitle(title)
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-8 px-5 py-6">
+    <div className="mx-auto flex flex-1 w-full max-w-3xl flex-col gap-8 px-5 py-6">
       <header>
         <BrandMark />
       </header>
