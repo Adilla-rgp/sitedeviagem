@@ -55,6 +55,12 @@ export function persistDb() {
   }
 }
 
+/** Volta todos os dados ao estado inicial (3 de 5 respostas, sem planos). */
+export function resetDb() {
+  Object.assign(db, createSeed())
+  persistDb()
+}
+
 // Outra aba (por exemplo, o convidado respondendo) alterou o banco.
 window.addEventListener('storage', (event) => {
   if (event.key !== STORAGE_KEY || !event.newValue) return
