@@ -1,0 +1,52 @@
+<!doctype html>
+<!--
+  Fonte da imagem de prévia (public/og-image.png, 1200 × 630).
+  Para gerar de novo: abra este arquivo num navegador com a janela em
+  1200 × 630 e capture a página, ou use qualquer ferramenta de captura
+  headless com esse tamanho. A imagem não leva o nome do produto, então
+  não precisa ser refeita quando o nome for definido.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; background: #0E0D12; color: #EDEBF2; font-family: 'IBM Plex Sans', sans-serif; }
+  .frame { box-sizing: border-box; width: 1200px; height: 630px; padding: 72px 80px; display: flex; gap: 56px; align-items: center; }
+  .text { flex: 1; display: flex; flex-direction: column; gap: 24px; }
+  .kicker { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 22px; letter-spacing: 0.06em; color: #C4B5FD; text-transform: uppercase; }
+  h1 { margin: 0; font-size: 58px; line-height: 1.12; font-weight: 600; letter-spacing: -0.015em; }
+  p { margin: 0; font-size: 26px; line-height: 1.4; color: #A19DAD; }
+  .formula { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 20px; color: #A19DAD; }
+  svg { flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="text">
+    <span class="kicker">Planejador de viagens em grupo</span>
+    <h1>O plano mais justo para o grupo, com quem cedeu o quê.</h1>
+    <p>Cada pessoa diz seus limites. O motor calcula e explica.</p>
+    <span class="formula">score = (1 − α) · média + α · pior</span>
+  </div>
+  <svg width="360" height="360" viewBox="0 0 360 360" aria-hidden="true">
+    <rect x="0.5" y="0.5" width="359" height="359" rx="14" fill="#131119" stroke="#2A2733"/>
+    <g stroke-width="3" fill="none">
+      <line x1="180" y1="70" x2="290" y2="150" stroke="#4A4560"/>
+      <line x1="180" y1="70" x2="250" y2="285" stroke="#4A4560"/>
+      <line x1="180" y1="70" x2="110" y2="285" stroke="#4A4560"/>
+      <line x1="290" y1="150" x2="250" y2="285" stroke="#4A4560"/>
+      <line x1="290" y1="150" x2="110" y2="285" stroke="#F5B454" stroke-dasharray="10 8"/>
+      <line x1="250" y1="285" x2="110" y2="285" stroke="#F5B454" stroke-dasharray="10 8"/>
+    </g>
+    <g stroke-width="3">
+      <circle cx="180" cy="70" r="30" fill="#1E1A2B" stroke="#4A4560"/>
+      <circle cx="290" cy="150" r="30" fill="#1E1A2B" stroke="#4A4560"/>
+      <circle cx="250" cy="285" r="30" fill="#1E1A2B" stroke="#4A4560"/>
+      <circle cx="110" cy="285" r="30" fill="#2A2215" stroke="#F5B454"/>
+      <circle cx="70" cy="150" r="30" fill="#0E0D12" stroke="#4A4560" stroke-dasharray="8 7"/>
+    </g>
+  </svg>
+</div>
+</body>
+</html>
