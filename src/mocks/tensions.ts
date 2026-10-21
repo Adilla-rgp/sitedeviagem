@@ -15,6 +15,10 @@ import type {
 
 // Cálculo do mapa de tensões a partir das restrições salvas. Funções puras,
 // sem acesso ao banco: vão para o back junto com o motor.
+//
+// Orçamento é confidencial: ele nunca vira aresta entre duas pessoas, porque a
+// aresta identificaria quem tem o limite. O que um orçamento elimina aparece em
+// key_constraints, sem nome ("O orçamento de um participante elimina Paraty.").
 
 /** Menos dias em comum que isso entre dois limites de data é conflito. */
 const MIN_COMMON_DAYS = 4
@@ -23,7 +27,10 @@ const STRONG_PREFERENCE_WEIGHT = 0.8
 /** Mínimo de limites para alguém ser destacado como quem tem "mais limites". */
 const MIN_LIMITS_FOR_MOST_RESTRICTIVE = 2
 /** Ordem de prioridade quando um par conflita em mais de um critério. */
-const CRITERION_PRIORITY: TensionCriterion[] = ['dates', 'budget', 'climate', 'pace']
+const CRITERION_PRIORITY: TensionCriterion[] = ['dates', 'climate', 'pace']
+/** Noites a menos do roteiro curto, que o motor também testa (planner-api/docs/motor.md). */
+const SHORT_VARIANT_NIGHTS_LESS = 2
+const MIN_NIGHTS = 2
 const DAY_MS = 24 * 60 * 60 * 1000
 
 interface TensionsInput {
@@ -51,31 +58,45 @@ export function computeTensions({ trip, members, destinations, constraints }: Te
     member_count: members.length,
     responded_count: respondents.length,
     most_restrictive_member_id: findMostRestrictive(respondents),
-    pairs: buildPairs(respondents, destinations),
+    pairs: buildPairs(trip, respondents, destinations),
     key_constraints: buildKeyConstraints(trip, respondents, destinations),
     viability: destinations.map<DestinationViability>((destination) => ({
       destination_id: destination.id,
-      accepted_count: respondents.filter((person) => !eliminatesDestination(person.hard, destination)).length,
+      accepted_count: respondents.filter((person) => !eliminatesDestination(trip, person.hard, destination)).length,
       responded_count: respondents.length,
     })),
   }
 }
 
-function eliminates(constraint: HardConstraint, destination: Destination): boolean {
+/** Noites do roteiro mais curto que o motor testa. */
+function shortestNights(trip: Trip): number {
+  const short = trip.nights - SHORT_VARIANT_NIGHTS_LESS
+  return short >= MIN_NIGHTS ? short : trip.nights
+}
+
+/**
+ * O limite elimina o destino quando nenhum roteiro dele o respeita, como no
+ * motor: o orçamento é comparado com o roteiro mais barato (o curto), e um
+ * limite de datas que não comporta nem o roteiro curto elimina todos.
+ */
+function eliminates(trip: Trip, constraint: HardConstraint, destination: Destination): boolean {
   switch (constraint.kind) {
     case 'budget':
-      return destination.est_cost_per_person > constraint.max_per_person
+      return destination.fixed_cost + shortestNights(trip) * destination.nightly_cost > constraint.max_per_person
     case 'exclude_climate':
       return constraint.climates.includes(destination.climate)
     case 'exclude_destination':
       return constraint.destination_ids.includes(destination.id)
-    case 'date_range':
-      return false
+    case 'date_range': {
+      const start = Math.max(toTime(constraint.start), toTime(trip.date_window_start))
+      const end = Math.min(toTime(constraint.end), toTime(trip.date_window_end))
+      return (end - start) / DAY_MS < shortestNights(trip)
+    }
   }
 }
 
-function eliminatesDestination(hard: HardConstraint[], destination: Destination): boolean {
-  return hard.some((constraint) => eliminates(constraint, destination))
+function eliminatesDestination(trip: Trip, hard: HardConstraint[], destination: Destination): boolean {
+  return hard.some((constraint) => eliminates(trip, constraint, destination))
 }
 
 function preferredDestinationIds(soft: SoftConstraint[]): string[] {
@@ -95,7 +116,7 @@ function dateRanges(hard: HardConstraint[]) {
   return hard.flatMap((item) => (item.kind === 'date_range' ? [{ start: toTime(item.start), end: toTime(item.end) }] : []))
 }
 
-function conflictCriteria(a: Respondent, b: Respondent, destinations: Destination[]): TensionCriterion[] {
+function conflictCriteria(trip: Trip, a: Respondent, b: Respondent, destinations: Destination[]): TensionCriterion[] {
   const criteria = new Set<TensionCriterion>()
 
   for (const rangeA of dateRanges(a.hard)) {
@@ -105,17 +126,16 @@ function conflictCriteria(a: Respondent, b: Respondent, destinations: Destinatio
     }
   }
 
-  // Um limite de um elimina um destino que o outro prefere.
+  // O limite de clima de um elimina um destino que o outro prefere. Orçamento
+  // não entra: a aresta diria de quem é o limite.
   for (const [limited, other] of [
     [a, b],
     [b, a],
   ]) {
     const preferred = destinations.filter((destination) => preferredDestinationIds(other.soft).includes(destination.id))
     for (const constraint of limited.hard) {
-      if (constraint.kind !== 'budget' && constraint.kind !== 'exclude_climate') continue
-      if (preferred.some((destination) => eliminates(constraint, destination))) {
-        criteria.add(constraint.kind === 'budget' ? 'budget' : 'climate')
-      }
+      if (constraint.kind !== 'exclude_climate') continue
+      if (preferred.some((destination) => eliminates(trip, constraint, destination))) criteria.add('climate')
     }
   }
 
@@ -133,11 +153,11 @@ function conflictCriteria(a: Respondent, b: Respondent, destinations: Destinatio
   return CRITERION_PRIORITY.filter((criterion) => criteria.has(criterion))
 }
 
-function buildPairs(respondents: Respondent[], destinations: Destination[]): MemberPair[] {
+function buildPairs(trip: Trip, respondents: Respondent[], destinations: Destination[]): MemberPair[] {
   const pairs: MemberPair[] = []
   respondents.forEach((a, index) => {
     for (const b of respondents.slice(index + 1)) {
-      const [criterion] = conflictCriteria(a, b, destinations)
+      const [criterion] = conflictCriteria(trip, a, b, destinations)
       pairs.push({
         member_a_id: a.member.id,
         member_b_id: b.member.id,
@@ -163,7 +183,6 @@ function joinNames(names: string[]): string {
 }
 
 const LIMIT_LABEL: Partial<Record<HardConstraint['kind'], string>> = {
-  budget: 'O limite de orçamento',
   exclude_climate: 'O limite de clima',
   exclude_destination: 'O veto',
 }
@@ -171,10 +190,23 @@ const LIMIT_LABEL: Partial<Record<HardConstraint['kind'], string>> = {
 function buildKeyConstraints(trip: Trip, respondents: Respondent[], destinations: Destination[]): KeyConstraint[] {
   const items: KeyConstraint[] = []
 
+  // Orçamento sem nome e sem dizer quem prefere o destino eliminado. Orçamentos
+  // que eliminam os mesmos destinos viram um item só.
+  for (const person of respondents) {
+    for (const constraint of person.hard) {
+      if (constraint.kind !== 'budget') continue
+      const eliminated = destinations.filter((destination) => eliminates(trip, constraint, destination))
+      if (eliminated.length === 0) continue
+      const id = `budget:${eliminated.map((item) => item.id).join(',')}`
+      if (items.some((item) => item.id === id)) continue
+      items.push({ id, summary: `O orçamento de um participante elimina ${joinNames(eliminated.map((item) => item.name))}.` })
+    }
+  }
+
   for (const person of respondents) {
     for (const constraint of person.hard) {
       const label = LIMIT_LABEL[constraint.kind]
-      const eliminated = destinations.filter((destination) => eliminates(constraint, destination))
+      const eliminated = destinations.filter((destination) => eliminates(trip, constraint, destination))
       if (!label || eliminated.length === 0) continue
 
       let summary = `${label} de ${person.member.display_name} elimina ${joinNames(eliminated.map((item) => item.name))}`

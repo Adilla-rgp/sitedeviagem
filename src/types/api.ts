@@ -153,14 +153,18 @@ export interface Invite {
 
 // Tensões
 
-export type TensionCriterion = 'budget' | 'climate' | 'dates' | 'pace'
+/**
+ * Orçamento não é critério de aresta: um conflito de orçamento identificaria
+ * quem tem o limite. O que um orçamento elimina aparece em key_constraints, sem nome.
+ */
+export type TensionCriterion = 'climate' | 'dates' | 'pace'
 
 /** Par de participantes que já responderam. */
 export interface MemberPair {
   member_a_id: string
   member_b_id: string
   status: 'compatible' | 'conflict'
-  /** Critério principal do conflito; nulo quando o par é compatível. */
+  /** Critério principal do conflito (datas, clima, ritmo, nessa ordem); nulo quando o par é compatível. */
   criterion: TensionCriterion | null
 }
 
