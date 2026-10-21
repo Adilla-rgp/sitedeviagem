@@ -57,7 +57,7 @@ score(p) = (1 − α) · média(s_i(p)) + α · min(s_i(p))
 
 ### Decisões do motor (21/10/2026)
 
-A implementação de referência fica no repositório `planner-api`, no pacote `engine/`. Os testes de lá cobrem cada regra abaixo.
+A implementação de referência fica no repositório `planner-api`, no pacote `engine/`, com as regras completas em `docs/motor.md`. Os testes de lá cobrem cada regra abaixo.
 
 **Duração.** O organizador fixa a duração ao criar a viagem (`trips.nights`, padrão 6). Para cada destino, o motor testa o roteiro padrão e um "roteiro curto" com 2 noites a menos (no mínimo 2 noites). O dia da volta é o dia da ida mais `nights`.
 
@@ -93,16 +93,17 @@ O **fator de duração** vale 1 no roteiro padrão. No roteiro curto, vale `1 �
 
 **Destinos excluídos.** A rodada devolve `excluded_destinations` com cada destino da viagem que não aparece nas alternativas e o motivo:
 
-- `limit`: nenhum candidato do destino respeita os limites. Traz os limites que ferem todos os candidatos; se o destino cai por uma combinação de limites, traz os que, retirados sozinhos, liberariam algum candidato; senão, todos os envolvidos. Cada limite aparece só como tipo e participante, nunca com o valor.
+- `limit`: nenhum candidato do destino respeita os limites. Traz os limites que ferem todos os candidatos; se o destino cai por uma combinação de limites, traz os que, retirados sozinhos, liberariam algum candidato; senão, todos os envolvidos. Cada limite aparece só como tipo e participante, nunca com o valor, e o de orçamento sem participante.
 - `lower_score`: viável, com score menor. Traz o melhor score entre as variantes do destino.
 
-**Sem plano viável.** O motor aponta o limite que, retirado sozinho, liberaria mais candidatos. Em caso de empate, usa o limite que aparece em mais violações. O formato dessa resposta na API ainda precisa ser definido. Ela não pode usar o `summary` de um limite de orçamento, porque o resumo traz o valor.
+**Sem plano viável.** A rodada existe mesmo assim (tabela `plan_rounds`) e devolve `plans: []`, `recommended_plan_id: null`, todos os destinos em `excluded_destinations` com motivo `limit` e `blocking_limits`: cada limite que elimina alternativas, com `kind`, `member_id` (nulo no orçamento) e `eliminated_candidates`, do que mais elimina para o que menos. A tela mostra o que bloqueia e sugere o que pode destravar (por exemplo, reduzir as noites). Nunca usa o `summary` de um limite de orçamento, porque o resumo traz o valor.
+
+**Privacidade do orçamento.** Além do valor, quem tem limite de orçamento não é identificado para o grupo: nas saídas de grupo (planos, destinos excluídos, limites que bloqueiam, mapa de tensões), o orçamento aparece sem participante. As justificativas não falam de orçamento, porque "cabe, mas no limite" ao lado do custo do plano revelaria quase o valor. Cada pessoa vê só os próprios limites e o que eles eliminam (`member_limits`, na tela Responder).
 
 **Justificativas.** São geradas por regras a partir dos mesmos termos da satisfação, em frases completas e sem supor gênero:
 
 - "Ganhou …": até 2 preferências declaradas com `m ≥ 0,75`. Quando a pessoa ganha o destino que indicou, tags e clima viram complemento dele ("Ganhou o destino que indicou, com praia.").
 - "Abriu mão …": até 2 itens, primeiro os dias perdidos ("de 2 dias de viagem") e depois as preferências declaradas com `m` abaixo de 0,5 ("do destino que indicou", "de um destino de serra", "do ritmo agitado que pediu").
-- Orçamento em três faixas ("cabe no orçamento com folga", "com pouca folga" e "mas no limite"), nunca com o valor.
 
 **Limitações conhecidas.**
 
@@ -128,6 +129,7 @@ O **fator de duração** vale 1 no roteiro padrão. No roteiro curto, vale `1 �
 | trip_destinations | trip_id, destination_id |
 | members | id, trip_id, display_name, invite_token, is_organizer, responded_at |
 | constraints | id, member_id, raw_text, hard (JSONB), soft (JSONB), confirmed_at, version |
+| plan_rounds | trip_id, round, alpha, alternatives_evaluated, excluded_destinations (JSONB), blocking_limits (JSONB), created_at |
 | plans | id, trip_id, round, destination_id, variant_label, start_date, end_date, est_cost_per_person, score, alpha, alternatives_evaluated, violated_limits, per_member_scores (JSONB), explanation (JSONB) |
 | reactions | id, plan_id, member_id, verdict, comment, reacted_at |
 
@@ -156,16 +158,20 @@ Os tipos exatos estão em `src/types/api.ts`. Detalhes acrescentados durante a i
 - **Itens de restrição (`hard` e `soft`):** cada item tem `id`, `kind`, os valores estruturados e um `summary`, uma frase pronta para exibição gerada pela API ("Até R$ 1.100 por pessoa, tudo incluso").
 - **plans.variant_label:** nome de uma variante do mesmo destino ("roteiro curto"); nulo no roteiro padrão. **plans.est_cost_per_person:** custo estimado do plano por pessoa.
 - **plans.alpha, alternatives_evaluated, violated_limits:** o α que o motor usou, quantas alternativas avaliou na rodada e quantos limites o plano viola (sempre zero nos planos devolvidos).
-- **Rodadas:** `GET /trips/{id}` e `GET /invite/{token}` trazem `latest_round` (nulo antes da primeira). `GET /trips/{id}/plans?round=n` devolve `plans` (do maior para o menor score), `recommended_plan_id` e `reactions`; o organizador recebe todas as reações, o convidado só a própria. Rodada inexistente responde 404. `POST /trips/{id}/plans` exige pelo menos 2 respostas.
+- **Rodadas:** `GET /trips/{id}` e `GET /invite/{token}` trazem `latest_round` (nulo antes da primeira). `GET /trips/{id}/plans?round=n` devolve o registro de `plan_rounds` (`alpha`, `alternatives_evaluated`, `excluded_destinations`, `blocking_limits`, `created_at`), `plans` (do maior para o menor score; vazio quando nada é viável), `recommended_plan_id` (nulo sem planos) e `reactions`; o organizador recebe todas as reações, o convidado só a própria. Rodada inexistente responde 404. `POST /trips/{id}/plans` exige pelo menos 2 respostas.
+- **Satisfação por participante (`per_member_scores`):** cada item traz `score`, `has_preferences` (falso para quem não declarou preferências, que fica fora do score) e `best_possible` (a maior satisfação da pessoa em qualquer alternativa que respeita os limites do grupo).
+- **trips.nights:** duração do roteiro padrão, padrão 6. **catalog_destinations:** `pace`, `fixed_cost` e `nightly_cost`; o `est_cost_per_person` devolvido é `fixed_cost + nights × nightly_cost`.
+- **prefer_destination:** `destination_ids` em ordem de preferência; o resumo diz a ordem ("Jericoacoara, depois Paraty").
+- **Limites da própria pessoa:** `POST /invite/{token}/constraints/parse` e `GET /invite/{token}` trazem `member_limits`: cada limite daquela pessoa com os destinos da viagem que ele elimina sozinho. Só para ela.
 - **Reações:** o convidado não tem conta, então `POST /plans/{id}/reactions` recebe o `invite_token` em vez de `member_id`. Reagir de novo ao mesmo plano substitui a reação anterior. O comentário é obrigatório em "aceito com ressalva" e "recuso"; o motivo da recusa vira restrição na rodada seguinte.
-- **Justificativas** nunca citam o valor do orçamento de alguém, porque ele é confidencial.
+- **Justificativas** não falam de orçamento: nem o valor nem a folga de alguém.
 - **GET /invite/{token}** devolve a viagem, o participante, `organizer_name`, `member_count`, os destinos candidatos, as restrições já salvas (ou nulo), `latest_round` e `members` (id, nome, se organiza e se respondeu; nunca os tokens de convite dos outros).
 - **GET /trips/{id}/tensions** devolve, considerando só quem já respondeu:
-  - `pairs`: cada par de participantes com `status` (`compatible` ou `conflict`) e, no conflito, o `criterion` principal (`dates`, `budget`, `climate` ou `pace`, nessa ordem de prioridade);
-  - `key_constraints`: as principais restrições, cada uma com `id` e `summary`;
+  - `pairs`: cada par de participantes com `status` (`compatible` ou `conflict`) e, no conflito, o `criterion` principal (`dates`, `climate` ou `pace`, nessa ordem de prioridade). Orçamento não é critério de aresta, porque identificaria quem tem o limite;
+  - `key_constraints`: as principais restrições, cada uma com `id` e `summary`. O que um orçamento elimina aparece aqui, sem nome ("O orçamento de um participante elimina Paraty.");
   - `viability`: para cada destino, `accepted_count` de `responded_count`;
   - `most_restrictive_member_id`: quem tem pelo menos 2 limites e estritamente mais que todos os outros (nulo se ninguém).
-- **Regras de conflito do mapa:** datas, quando dois limites de data têm menos de 4 dias em comum; orçamento ou clima, quando o limite de um elimina um destino que o outro prefere; ritmo, quando um prefere tranquilo e outro agitado, ambos com peso de pelo menos 0,8.
+- **Regras de conflito do mapa:** datas, quando dois limites de data têm menos de 4 dias em comum; clima, quando o limite de um elimina um destino que o outro prefere; ritmo, quando um prefere tranquilo e outro agitado, ambos com peso de pelo menos 0,8. Um limite elimina um destino quando nenhum roteiro dele o respeita: o orçamento é comparado com o roteiro mais barato, e um limite de datas que não comporta nem o roteiro curto elimina todos.
 
 ## Roadmap
 
