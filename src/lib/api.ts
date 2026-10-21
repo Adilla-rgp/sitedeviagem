@@ -35,6 +35,11 @@ export class ApiError extends Error {
   }
 }
 
+/** Mensagem pronta para a interface: a da API quando houver, senão a genérica. */
+export function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError ? error.message : fallback
+}
+
 function respond<T>(handler: () => T): Promise<T> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
