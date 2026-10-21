@@ -114,6 +114,43 @@ export interface Invite {
   constraints: Constraints | null
 }
 
+// Tensões
+
+export type TensionCriterion = 'budget' | 'climate' | 'dates' | 'pace'
+
+/** Par de participantes que já responderam. */
+export interface MemberPair {
+  member_a_id: string
+  member_b_id: string
+  status: 'compatible' | 'conflict'
+  /** Critério principal do conflito; nulo quando o par é compatível. */
+  criterion: TensionCriterion | null
+}
+
+export interface KeyConstraint {
+  id: string
+  summary: string
+}
+
+export interface DestinationViability {
+  destination_id: string
+  /** Quantos dos que responderam aceitam o destino (nenhum limite o elimina). */
+  accepted_count: number
+  responded_count: number
+}
+
+/** GET /trips/{id}/tensions */
+export interface TripTensions {
+  trip_id: string
+  member_count: number
+  responded_count: number
+  /** Quem tem mais limites, quando há um único com mais que os demais. */
+  most_restrictive_member_id: string | null
+  pairs: MemberPair[]
+  key_constraints: KeyConstraint[]
+  viability: DestinationViability[]
+}
+
 // Planos
 
 export interface MemberScore {
