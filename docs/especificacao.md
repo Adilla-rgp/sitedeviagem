@@ -170,7 +170,7 @@ Os tipos exatos estão em `src/types/api.ts`. Detalhes acrescentados durante a i
   - `pairs`: cada par de participantes com `status` (`compatible` ou `conflict`) e, no conflito, o `criterion` principal (`dates`, `climate` ou `pace`, nessa ordem de prioridade). Orçamento não é critério de aresta, porque identificaria quem tem o limite;
   - `key_constraints`: as principais restrições, cada uma com `id` e `summary`. O que um orçamento elimina aparece aqui, sem nome ("O orçamento de um participante elimina Paraty.");
   - `viability`: para cada destino, `accepted_count` de `responded_count`;
-  - `most_restrictive_member_id`: quem tem pelo menos 2 limites e estritamente mais que todos os outros (nulo se ninguém).
+  - `most_restrictive_member_id`: quem tem pelo menos 2 limites e estritamente mais que todos os outros (nulo se ninguém). Limites de orçamento não entram na contagem, para o destaque não revelar quem tem orçamento.
 - **Regras de conflito do mapa:** datas, quando dois limites de data têm menos de 4 dias em comum; clima, quando o limite de um elimina um destino que o outro prefere; ritmo, quando um prefere tranquilo e outro agitado, ambos com peso de pelo menos 0,8. Um limite elimina um destino quando nenhum roteiro dele o respeita: o orçamento é comparado com o roteiro mais barato, e um limite de datas que não comporta nem o roteiro curto elimina todos.
 
 ## Roadmap

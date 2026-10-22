@@ -185,7 +185,10 @@ export interface TripTensions {
   trip_id: string
   member_count: number
   responded_count: number
-  /** Quem tem pelo menos 2 limites e estritamente mais que todos os outros; nulo se ninguém. */
+  /**
+   * Quem tem pelo menos 2 limites e estritamente mais que todos os outros; nulo se
+   * ninguém. Orçamento não conta, para não identificar quem tem esse limite.
+   */
   most_restrictive_member_id: string | null
   pairs: MemberPair[]
   key_constraints: KeyConstraint[]

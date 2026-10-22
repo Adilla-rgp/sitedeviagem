@@ -15,8 +15,10 @@ function constraintsFor(memberId: string, change?: (record: Constraints) => Cons
   return change ? change(record) : record
 }
 
+/** Tensões com as respostas salvas mais estas, que substituem as de quem já respondeu. */
 function tensionsWith(extra: Constraints[]) {
-  const respondedIds = new Set([...constraints, ...extra].map((item) => item.member_id))
+  const all = [...constraints.filter((item) => !extra.some((other) => other.member_id === item.member_id)), ...extra]
+  const respondedIds = new Set(all.map((item) => item.member_id))
   return computeTensions({
     trip,
     members: members.map((member) => ({
@@ -24,7 +26,7 @@ function tensionsWith(extra: Constraints[]) {
       responded_at: respondedIds.has(member.id) ? '2026-10-20T10:00:00Z' : null,
     })),
     destinations,
-    constraints: [...constraints, ...extra],
+    constraints: all,
   })
 }
 
@@ -53,6 +55,18 @@ describe('mapa de tensões', () => {
     const { key_constraints: items, viability } = tensionsWith([constraintsFor('mem-eva')])
     expect(items.some((item) => item.summary.includes('orçamento'))).toBe(false)
     expect(viability.find((item) => item.destination_id === 'dest-paraty')?.accepted_count).toBe(4)
+  })
+
+  it('não conta orçamento para destacar quem tem mais limites', () => {
+    // Eva tem 3 limites, um deles de orçamento. Com um segundo limite, Bruno empata
+    // com ela, e ninguém é destacado.
+    const brunoTwoLimits = constraintsFor('mem-bruno', (record) => ({
+      ...record,
+      hard: [...record.hard, { id: 'bruno-h2', kind: 'exclude_climate', climates: ['cold'], summary: 'Nada de frio' }],
+    }))
+    expect(tensionsWith([constraintsFor('mem-eva')]).most_restrictive_member_id).toBe('mem-eva')
+    const tied = tensionsWith([constraintsFor('mem-eva'), brunoTwoLimits])
+    expect(tied.most_restrictive_member_id).toBeNull()
   })
 
   it('mantém o nome em limites que não são de orçamento', () => {
