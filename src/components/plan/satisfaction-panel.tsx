@@ -86,7 +86,7 @@ export function SatisfactionPanel({ plan, members, viewerId }: SatisfactionPanel
       <p className="text-xs text-warn">
         {summary.worstMemberIds.length > 1
           ? 'Em destaque: quem empata com a menor satisfação, que o critério de equilíbrio protege.'
-          : 'Destacado: o participante com menor satisfação, que o critério de equilíbrio protege.'}
+          : 'Destacado: quem tem a menor satisfação, que o critério de equilíbrio protege.'}
       </p>
       <p className="-mt-2 text-xs leading-normal text-ink-muted">
         A marca na barra é o melhor que cada pessoa teria em alguma alternativa que respeita os limites de todos.
