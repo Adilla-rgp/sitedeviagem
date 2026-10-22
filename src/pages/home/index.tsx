@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { BrandMark } from '../../components/brand-mark'
 import { buttonVariants } from '../../components/button-styles'
 import { brand } from '../../config/brand'
 import { demoConfig } from '../../config/demo'
-import { demoGuestName, demoPaths, demoSummary, resetDemo } from '../../lib/demo'
+import { demoBlockingGuestName, demoGuestName, demoPaths, demoSummary, resetDemo } from '../../lib/demo'
 import { formatCount } from '../../lib/format'
 import { useDocumentTitle } from '../../lib/use-document-title'
 
@@ -27,7 +28,7 @@ const linkClass = 'inline-flex min-h-11 items-center text-accent-soft underline 
 export function HomePage() {
   useDocumentTitle('Planejador de viagens em grupo')
 
-  const tour = [
+  const tour: { link: ReactNode; text: string; optional?: boolean }[] = [
     {
       // Link comum (não do Router): recarrega a página já com os dados reiniciados.
       link: (
@@ -67,7 +68,16 @@ export function HomePage() {
           Reagir como {demoGuestName}
         </Link>
       ),
-      text: 'Aceite, aceite com ressalva ou recuse. A organizadora vê a reação na tela de planos.',
+      text: 'Aceite, aceite com ressalva ou recuse. Quem organiza vê a reação na tela de planos.',
+    },
+    {
+      link: (
+        <Link to={demoPaths.blockingGuestResponse} className={linkClass}>
+          Responder como {demoBlockingGuestName} e ver que nada cabe
+        </Link>
+      ),
+      text: `${demoBlockingGuestName} só pode viajar 3 noites. Depois de enviar, gere uma nova rodada pelo mapa: nenhum plano respeita os limites de todos, e a tela mostra o que bloqueia.`,
+      optional: true,
     },
   ]
 
@@ -144,6 +154,11 @@ export function HomePage() {
                 <li key={index} className="grid grid-cols-[24px_minmax(0,1fr)] gap-x-2 text-sm leading-[1.45]">
                   <span className="pt-3 font-mono text-[13px] font-medium text-ink-muted">{index + 1}.</span>
                   <div className="flex flex-col">
+                    {step.optional && (
+                      <span className="pt-3 font-mono text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                        Opcional
+                      </span>
+                    )}
                     <span className="font-medium">{step.link}</span>
                     <span className="text-ink-muted">{step.text}</span>
                   </div>

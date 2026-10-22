@@ -7,6 +7,11 @@ const guest = members.find((member) => member.display_name === 'Eva') ?? members
 
 export const demoGuestName = guest.display_name
 
+/** Quem responde no passo opcional: com o limite de datas dessa pessoa, nada cabe. */
+const blockingGuest = members.find((member) => member.display_name === 'Diego') ?? members[members.length - 1]
+
+export const demoBlockingGuestName = blockingGuest.display_name
+
 /** Resumo do estado inicial, para a página inicial. */
 export const demoSummary = {
   tripTitle: trip.title,
@@ -20,6 +25,7 @@ export const demoPaths = {
   plans: `/viagens/${TRIP_ID}/planos`,
   guestResponse: `/convite/${guest.invite_token}`,
   guestPlan: `/convite/${guest.invite_token}/plano`,
+  blockingGuestResponse: `/convite/${blockingGuest.invite_token}`,
 }
 
 /** Volta os dados de exemplo ao início: 3 de 5 respostas e nenhum plano. */
