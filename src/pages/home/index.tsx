@@ -67,7 +67,7 @@ export function HomePage() {
           Reagir como {demoGuestName}
         </Link>
       ),
-      text: 'Aceite, aceite com ressalva ou recuse. A organizadora vê a reação na tela de planos.',
+      text: 'Aceite, aceite com ressalva ou recuse. Quem organiza vê a reação na tela de planos.',
     },
   ]
 
@@ -85,6 +85,19 @@ export function HomePage() {
           <h1 id="hero-heading" className="text-[28px] font-semibold leading-tight tracking-[-0.015em] sm:text-4xl">
             Cada pessoa do grupo diz seus limites; o {brand.name} calcula o plano mais justo e mostra quem cedeu o quê.
           </h1>
+          {!demoConfig.enabled && (
+            <div className="flex flex-col gap-2">
+              <Link
+                to="/viagens/nova"
+                className={buttonVariants({ size: 'lg', className: 'self-start text-[15px] hover:bg-accent-soft' })}
+              >
+                Criar viagem
+              </Link>
+              <p className="text-[13px] text-ink-muted">
+                Sem cadastro: você recebe um link de administração e os links de convite do grupo.
+              </p>
+            </div>
+          )}
           {demoConfig.enabled && (
             <div className="flex flex-col gap-2">
               <a

@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { tv } from 'tailwind-variants'
-import { Button } from '../../components/button'
+import { Button } from '../button'
 import { formatList } from '../../lib/format'
 import type { ConstraintsInput, Destination, MemberLimit } from '../../types/api'
 

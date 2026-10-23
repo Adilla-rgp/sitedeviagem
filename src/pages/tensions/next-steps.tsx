@@ -5,7 +5,7 @@ import { AlertMessage } from '../../components/alert-message'
 import { Button } from '../../components/button'
 import { CopyButton } from '../../components/copy-button'
 import { formatList } from '../../lib/format'
-import { inviteUrl } from '../../lib/links'
+import { inviteLinks, missingLinks } from '../../lib/invites'
 import { useGeneratePlans } from '../../lib/use-generate-plans'
 import type { TripDetail } from '../../types/api'
 
@@ -21,7 +21,9 @@ export function NextSteps({ trip, respondedCount }: NextStepsProps) {
   const hintId = useId()
   const { generate, isGenerating, error } = useGeneratePlans(trip.id)
   const pending = trip.members.filter((member) => !member.responded_at)
-  const canPlan = respondedCount >= MIN_RESPONSES_TO_PLAN
+  const isClosed = trip.status === 'agreed'
+  const canPlan = respondedCount >= MIN_RESPONSES_TO_PLAN && !isClosed
+  const missing = missingLinks(trip.id, pending)
   const plansPath = `/viagens/${trip.id}/planos`
   const responsesLabel = `${respondedCount} ${respondedCount === 1 ? 'resposta' : 'respostas'}`
 
@@ -29,13 +31,14 @@ export function NextSteps({ trip, respondedCount }: NextStepsProps) {
     if (await generate()) navigate(plansPath)
   }
 
-  function buildReminderText() {
+  async function buildReminderText() {
+    const links = await inviteLinks(trip.id, pending)
     if (pending.length === 1) {
       const [member] = pending
-      return `Oi, ${member.display_name}! Falta só a sua resposta para a viagem "${trip.title}". Leva um minuto: ${inviteUrl(member.invite_token)}`
+      return `Oi, ${member.display_name}! Falta só a sua resposta para a viagem "${trip.title}". Leva um minuto: ${links.get(member.id) ?? ''}`
     }
     const names = formatList(pending.map((member) => member.display_name))
-    const lines = pending.map((member) => `${member.display_name}: ${inviteUrl(member.invite_token)}`)
+    const lines = pending.map((member) => `${member.display_name}: ${links.get(member.id) ?? ''}`)
     return [
       `Oi! Ainda faltam as respostas de ${names} para a viagem "${trip.title}". Cada pessoa tem o próprio link:`,
       ...lines,
@@ -70,7 +73,7 @@ export function NextSteps({ trip, respondedCount }: NextStepsProps) {
         <>
           {/* Já existe rodada: ver os planos é a ação principal; gerar outra reinicia as reações. */}
           <Button size="lg" block className="text-[15px]" onClick={() => navigate(plansPath)}>
-            Ver planos da rodada {trip.latest_round}
+            {isClosed ? 'Ver o plano final' : `Ver planos da rodada ${trip.latest_round}`}
           </Button>
           <Button
             variant="secondary"
@@ -84,7 +87,11 @@ export function NextSteps({ trip, respondedCount }: NextStepsProps) {
           </Button>
         </>
       )}
-      {!canPlan ? (
+      {isClosed ? (
+        <p id={hintId} className="text-[13px] text-ink-muted">
+          A viagem fechou: todos que responderam aceitaram o plano recomendado. Não há novas rodadas.
+        </p>
+      ) : !canPlan ? (
         <p id={hintId} className="text-[13px] text-ink-muted">
           São necessárias pelo menos {MIN_RESPONSES_TO_PLAN} respostas para gerar planos.
         </p>
@@ -96,12 +103,21 @@ export function NextSteps({ trip, respondedCount }: NextStepsProps) {
         )
       )}
       {error && <AlertMessage>{error}</AlertMessage>}
-      {pending.length > 0 && (
-        <CopyButton
-          label={pending.length === 1 ? `Copiar lembrete para ${pending[0].display_name}` : 'Copiar lembrete para quem falta'}
-          getText={buildReminderText}
-          successMessage="Lembrete copiado com o link do convite. Cole na conversa."
-        />
+      {pending.length > 0 && !isClosed && (
+        <>
+          {missing.length > 0 && (
+            <p className="text-xs leading-normal text-ink-muted">
+              Sem link guardado neste navegador para {formatList(missing.map((member) => member.display_name))}: ao
+              copiar o lembrete, um link novo é gerado e o anterior deixa de valer.
+            </p>
+          )}
+          <CopyButton
+            label={pending.length === 1 ? `Copiar lembrete para ${pending[0].display_name}` : 'Copiar lembrete para quem falta'}
+            getText={buildReminderText}
+            successMessage="Lembrete copiado com o link do convite. Cole na conversa."
+            errorMessage="Não foi possível gerar o link do convite. Tente novamente."
+          />
+        </>
       )}
     </div>
   )

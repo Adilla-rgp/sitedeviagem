@@ -7,14 +7,16 @@ interface PlanHeadingProps {
   destinations: Destination[]
   /** Linha acima do rótulo, por exemplo a trilha da viagem. */
   context?: string
+  /** Viagem fechada: o recomendado é o plano final. */
+  isFinal?: boolean
 }
 
-export function PlanHeading({ plan, destinations, context }: PlanHeadingProps) {
+export function PlanHeading({ plan, destinations, context, isFinal = false }: PlanHeadingProps) {
   return (
     <div className="flex flex-col gap-1.5">
       {context && <p className="text-[13px] text-ink-muted">{context}</p>}
       <span className="mt-2 font-mono text-xs font-medium uppercase tracking-[0.06em] text-accent-soft">
-        Plano recomendado
+        {isFinal ? 'Plano final' : 'Plano recomendado'}
       </span>
       <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.015em] sm:text-[32px]">
         {planTitle(plan, destinations)}

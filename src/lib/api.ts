@@ -1,4 +1,7 @@
+import { apiConfig } from '../config/api'
+import { mockApi } from '../mocks/api'
 import type {
+  ConfirmRejectionInput,
   Constraints,
   ConstraintsInput,
   CreateMembersInput,
@@ -7,322 +10,166 @@ import type {
   Destination,
   Invite,
   Member,
-  MemberLimit,
   ParsedConstraints,
-  Plan,
   PlanRound,
-  PlanRoundRecord,
-  Reaction,
-  Trip,
+  ReactionResult,
+  TripCreated,
   TripDetail,
   TripTensions,
 } from '../types/api'
-import { findEngineRound, memberLimitsFor, toEngineInput } from '../mocks/engine-fixture'
-import { db, nextId, persistDb } from '../mocks/store'
-import { computeTensions } from '../mocks/tensions'
-import { sampleInterpretation } from '../mocks/trip-july'
+import { ApiError, request } from './http'
+import { getAdminToken, getInviteToken, saveAdminToken, saveInviteTokens } from './tokens'
 
-// Única porta de entrada de dados do front. Cada função espelha uma rota do
-// contrato (docs/especificacao.md). Hoje responde com os mocks de src/mocks/
-// após um atraso simulado; quando a API existir, só este arquivo muda.
+export { ApiError, getErrorMessage } from './http'
 
-const MOCK_LATENCY_MS = 700
-const MIN_RAW_TEXT_LENGTH = 10
-const MIN_REACTION_COMMENT_LENGTH = 3
-const DEFAULT_NIGHTS = 6
+// Única porta de entrada de dados do front. Cada função espelha uma rota da
+// planner-api. Com VITE_API_URL definida, chama a API; sem ela, responde com a
+// API de demonstração (src/mocks/api.ts), no mesmo formato e com os mesmos erros.
 
-export class ApiError extends Error {
-  readonly status: number
+export interface Api {
+  /** GET /destinations */
+  getDestinations(): Promise<Destination[]>
+  /** POST /trips. Guarda neste navegador o token de administração e o convite de quem organiza. */
+  createTrip(input: CreateTripInput): Promise<TripCreated>
+  /** GET /trips/{id} */
+  getTrip(tripId: string): Promise<TripDetail>
+  /** POST /trips/{id}/members */
+  createMembers(tripId: string, input: CreateMembersInput): Promise<Member[]>
+  /** POST /trips/{id}/members/{member_id}/invite: novo link de convite; o anterior deixa de valer. */
+  reissueInvite(tripId: string, memberId: string): Promise<Member>
+  /** GET /invite/{token} */
+  getInvite(token: string): Promise<Invite>
+  /** POST /invite/{token}/constraints/parse: interpreta o texto livre, não salva. */
+  parseConstraints(token: string, rawText: string): Promise<ParsedConstraints>
+  /** PUT /invite/{token}/constraints: salva as restrições confirmadas. */
+  saveConstraints(token: string, input: ConstraintsInput): Promise<Constraints>
+  /** GET /trips/{id}/tensions: compatibilidade, principais restrições e viabilidade. */
+  getTripTensions(tripId: string): Promise<TripTensions>
+  /** POST /trips/{id}/plans: roda o motor e gera uma nova rodada. */
+  generatePlans(tripId: string): Promise<PlanRound>
+  /** GET /trips/{id}/plans?round=n. Com o token do convite, como convidado; sem ele, como quem organiza. */
+  getPlans(tripId: string, round: number, inviteToken?: string): Promise<PlanRound>
+  /** POST /plans/{id}/reactions: cria ou substitui a reação ao plano. */
+  createReaction(planId: string, input: CreateReactionInput): Promise<ReactionResult>
+  /** POST /plans/{id}/reactions/constraints: confirma o que o motivo da recusa pede. */
+  confirmRejection(planId: string, input: ConfirmRejectionInput): Promise<Constraints>
+}
 
-  constructor(status: number, message: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
+const ADMIN_HEADER = 'X-Admin-Token'
+const INVITE_HEADER = 'X-Invite-Token'
+
+/** Sem o token de administração guardado, a API recusaria: avisa antes, com o caminho de volta. */
+function adminHeaders(tripId: string): Record<string, string> {
+  const token = getAdminToken(tripId)
+  if (!token) {
+    throw new ApiError(
+      401,
+      'Este navegador não tem o acesso de quem organiza esta viagem. Abra o link de administração recebido ao criar a viagem.',
+    )
   }
+  return { [ADMIN_HEADER]: token }
 }
 
-/** Mensagem pronta para a interface: a da API quando houver, senão a genérica. */
-export function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof ApiError ? error.message : fallback
-}
-
-function respond<T>(handler: () => T): Promise<T> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      try {
-        const result = handler()
-        persistDb()
-        // Cópia para que a tela nunca altere o banco em memória por referência.
-        resolve(structuredClone(result))
-      } catch (error) {
-        reject(error)
-      }
-    }, MOCK_LATENCY_MS)
-  })
-}
-
-function now(): string {
-  return new Date().toISOString()
-}
-
-function findTrip(tripId: string): Trip {
-  const trip = db.trips.find((item) => item.id === tripId)
-  if (!trip) throw new ApiError(404, 'Viagem não encontrada.')
-  return trip
-}
-
-function findMemberByToken(token: string): Member {
-  const member = db.members.find((item) => item.invite_token === token)
-  if (!member) throw new ApiError(404, 'Convite não encontrado.')
-  return member
-}
-
-function tripDestinations(tripId: string): Destination[] {
-  const ids = db.tripDestinations.filter((item) => item.trip_id === tripId).map((item) => item.destination_id)
-  return db.destinations.filter((destination) => ids.includes(destination.id))
-}
-
-function latestConstraints(memberId: string): Constraints | null {
-  const versions = db.constraints.filter((item) => item.member_id === memberId)
-  if (versions.length === 0) return null
-  return versions.reduce((latest, item) => (item.version > latest.version ? item : latest))
-}
-
-function latestRound(tripId: string): number | null {
-  const rounds = db.planRounds.filter((record) => record.trip_id === tripId).map((record) => record.round)
-  return rounds.length > 0 ? Math.max(...rounds) : null
-}
-
-/** O que os limites desta pessoa eliminam, para a tela dela. */
-function ownLimits(hard: { id: string }[]): MemberLimit[] {
-  return memberLimitsFor(hard.map((item) => item.id))
-}
-
-function buildRound(tripId: string, round: number): PlanRound {
-  findTrip(tripId)
-  const record = db.planRounds.find((item) => item.trip_id === tripId && item.round === round)
-  if (!record) throw new ApiError(404, 'Rodada não encontrada.')
-  const plans = db.plans
-    .filter((plan) => plan.trip_id === tripId && plan.round === round)
-    .sort((a, b) => b.score - a.score)
-  const planIds = plans.map((plan) => plan.id)
+/** A API só devolve o token do convite uma vez; completa com os que estão guardados aqui. */
+function withStoredTokens<T extends { members: Member[] }>(tripId: string, detail: T): T {
+  saveInviteTokens(tripId, detail.members)
   return {
-    ...record,
-    plans,
-    recommended_plan_id: plans[0]?.id ?? null,
-    reactions: db.reactions.filter((reaction) => planIds.includes(reaction.plan_id)),
+    ...detail,
+    members: detail.members.map((member) => ({
+      ...member,
+      invite_token: member.invite_token ?? getInviteToken(tripId, member.id),
+    })),
   }
 }
 
-/** POST /auth/magic-link */
-export function requestMagicLink(email: string): Promise<void> {
-  return respond(() => {
-    if (!email.includes('@')) throw new ApiError(422, 'Informe um e-mail válido.')
-  })
-}
+const remoteApi: Api = {
+  getDestinations: () => request('/destinations'),
 
-/** GET /destinations */
-export function getDestinations(): Promise<Destination[]> {
-  return respond(() => db.destinations)
-}
+  createTrip: (input) => request<TripCreated>('/trips', { method: 'POST', body: input }),
 
-/** POST /trips */
-export function createTrip(input: CreateTripInput): Promise<Trip> {
-  return respond(() => {
-    if (input.destination_ids.length < 2 || input.destination_ids.length > 4) {
-      throw new ApiError(422, 'Escolha de 2 a 4 destinos.')
-    }
-    const trip: Trip = {
-      id: nextId('trip'),
-      title: input.title,
-      organizer_id: 'user-ana',
-      date_window_start: input.date_window_start,
-      date_window_end: input.date_window_end,
-      nights: input.nights ?? DEFAULT_NIGHTS,
-      alpha: input.alpha ?? 0.5,
-      status: 'collecting',
-      created_at: now(),
-    }
-    db.trips.push(trip)
-    db.tripDestinations.push(...input.destination_ids.map((destination_id) => ({ trip_id: trip.id, destination_id })))
-    return trip
-  })
-}
+  async getTrip(tripId) {
+    const detail = await request<TripDetail>(`/trips/${tripId}`, { headers: adminHeaders(tripId) })
+    return withStoredTokens(tripId, detail)
+  },
 
-/** GET /trips/{id} */
-export function getTrip(tripId: string): Promise<TripDetail> {
-  return respond(() => ({
-    ...findTrip(tripId),
-    destinations: tripDestinations(tripId),
-    members: db.members.filter((member) => member.trip_id === tripId),
-    latest_round: latestRound(tripId),
-  }))
-}
-
-/** POST /trips/{id}/members */
-export function createMembers(tripId: string, input: CreateMembersInput): Promise<Member[]> {
-  return respond(() => {
-    findTrip(tripId)
-    const current = db.members.filter((member) => member.trip_id === tripId).length
-    if (current + input.display_names.length > 8) throw new ApiError(422, 'A viagem aceita no máximo 8 pessoas.')
-    const created = input.display_names.map<Member>((display_name) => ({
-      id: nextId('mem'),
-      trip_id: tripId,
-      display_name,
-      invite_token: nextId('inv'),
-      is_organizer: false,
-      responded_at: null,
-    }))
-    db.members.push(...created)
-    return created
-  })
-}
-
-/** GET /invite/{token} */
-export function getInvite(token: string): Promise<Invite> {
-  return respond(() => {
-    const member = findMemberByToken(token)
-    const trip = findTrip(member.trip_id)
-    const tripMembers = db.members.filter((item) => item.trip_id === trip.id)
-    const organizer = tripMembers.find((item) => item.is_organizer)
-    const constraints = latestConstraints(member.id)
-    return {
-      trip,
-      member,
-      organizer_name: organizer?.display_name ?? '',
-      member_count: tripMembers.length,
-      members: tripMembers.map(({ id, display_name, is_organizer, responded_at }) => ({
-        id,
-        display_name,
-        is_organizer,
-        responded_at,
-      })),
-      destinations: tripDestinations(trip.id),
-      constraints,
-      member_limits: constraints ? ownLimits(constraints.hard) : [],
-      latest_round: latestRound(trip.id),
-    }
-  })
-}
-
-/** POST /invite/{token}/constraints/parse — interpreta o texto livre, não salva. */
-export function parseConstraints(token: string, rawText: string): Promise<ParsedConstraints> {
-  return respond(() => {
-    const member = findMemberByToken(token)
-    const text = rawText.trim()
-    if (text.length < MIN_RAW_TEXT_LENGTH) {
-      throw new ApiError(422, 'Escreva um pouco mais sobre suas condições para que possamos interpretar.')
-    }
-    const interpretation = sampleInterpretation(member.id, text)
-    return { ...interpretation, member_limits: ownLimits(interpretation.hard) }
-  })
-}
-
-/** PUT /invite/{token}/constraints — salva as restrições confirmadas. */
-export function saveConstraints(token: string, input: ConstraintsInput): Promise<Constraints> {
-  return respond(() => {
-    const member = findMemberByToken(token)
-    const previous = latestConstraints(member.id)
-    const confirmedAt = now()
-    const record: Constraints = {
-      ...input,
-      id: nextId('cons'),
-      member_id: member.id,
-      confirmed_at: confirmedAt,
-      version: (previous?.version ?? 0) + 1,
-    }
-    db.constraints.push(record)
-    member.responded_at = confirmedAt
-    return record
-  })
-}
-
-/** GET /trips/{id}/tensions — compatibilidade, principais restrições e viabilidade. */
-export function getTripTensions(tripId: string): Promise<TripTensions> {
-  return respond(() => {
-    const trip = findTrip(tripId)
-    const members = db.members.filter((member) => member.trip_id === tripId)
-    return computeTensions({
-      trip,
-      members,
-      destinations: tripDestinations(tripId),
-      constraints: members.flatMap((member) => latestConstraints(member.id) ?? []),
+  async createMembers(tripId, input) {
+    const created = await request<Member[]>(`/trips/${tripId}/members`, {
+      method: 'POST',
+      body: input,
+      headers: adminHeaders(tripId),
     })
-  })
+    saveInviteTokens(tripId, created)
+    return created
+  },
+
+  async reissueInvite(tripId, memberId) {
+    const member = await request<Member>(`/trips/${tripId}/members/${memberId}/invite`, {
+      method: 'POST',
+      headers: adminHeaders(tripId),
+    })
+    saveInviteTokens(tripId, [member])
+    return member
+  },
+
+  getInvite: (token) => request(`/invite/${token}`),
+
+  parseConstraints: (token, rawText) =>
+    request(`/invite/${token}/constraints/parse`, { method: 'POST', body: { raw_text: rawText } }),
+
+  saveConstraints: (token, input) => request(`/invite/${token}/constraints`, { method: 'PUT', body: input }),
+
+  getTripTensions: (tripId) => request(`/trips/${tripId}/tensions`, { headers: adminHeaders(tripId) }),
+
+  generatePlans: (tripId) => request(`/trips/${tripId}/plans`, { method: 'POST', headers: adminHeaders(tripId) }),
+
+  getPlans: (tripId, round, inviteToken) =>
+    request(`/trips/${tripId}/plans`, {
+      query: { round },
+      headers: inviteToken ? { [INVITE_HEADER]: inviteToken } : adminHeaders(tripId),
+    }),
+
+  createReaction: (planId, input) => request(`/plans/${planId}/reactions`, { method: 'POST', body: input }),
+
+  confirmRejection: (planId, input) =>
+    request(`/plans/${planId}/reactions/constraints`, { method: 'POST', body: input }),
+}
+
+const api: Api = apiConfig.baseUrl === null ? mockApi : remoteApi
+
+export const {
+  getDestinations,
+  getTrip,
+  createMembers,
+  reissueInvite,
+  getInvite,
+  parseConstraints,
+  saveConstraints,
+  getTripTensions,
+  generatePlans,
+  getPlans,
+  createReaction,
+  confirmRejection,
+} = api
+
+/** Nos dois modos, o token de administração e o convite de quem organiza ficam guardados neste navegador. */
+export async function createTrip(input: CreateTripInput): Promise<TripCreated> {
+  const created = await api.createTrip(input)
+  saveAdminToken(created.id, created.admin_token)
+  return withStoredTokens(created.id, created)
 }
 
 /**
- * POST /trips/{id}/plans — roda o motor e gera uma nova rodada.
- * O front não tem motor: o mock usa a rodada de fixtures/july-trip.json que foi
- * calculada exatamente com as respostas salvas. Se a combinação não foi
- * exportada, avisa em vez de mostrar números que não correspondem às respostas.
+ * Por que a API recusou com 409: plano de rodada anterior ou viagem já fechada.
+ * A API distingue os dois só pela mensagem; a regra fica neste lugar.
  */
-export function generatePlans(tripId: string): Promise<PlanRound> {
-  return respond(() => {
-    const trip = findTrip(tripId)
-    const respondents = db.members.filter((member) => member.trip_id === tripId && member.responded_at)
-    if (respondents.length < 2) throw new ApiError(422, 'São necessárias pelo menos 2 respostas para gerar planos.')
-
-    const responses = respondents.flatMap((member) => {
-      const record = latestConstraints(member.id)
-      return record ? [toEngineInput(record)] : []
-    })
-    const engine = findEngineRound(responses)
-    if (!engine) {
-      throw new ApiError(
-        422,
-        'Os dados de exemplo não têm um cálculo para esta combinação de respostas. Reinicie a demonstração ou use as respostas sugeridas.',
-      )
-    }
-
-    const round = (latestRound(tripId) ?? 0) + 1
-    const record: PlanRoundRecord = {
-      trip_id: tripId,
-      round,
-      alpha: engine.alpha,
-      alternatives_evaluated: engine.alternatives_evaluated,
-      excluded_destinations: engine.excluded_destinations,
-      blocking_limits: engine.blocking_limits,
-      created_at: now(),
-    }
-    const plans = engine.plans.map<Plan>((seed) => ({ ...seed, id: nextId('plan'), trip_id: tripId, round }))
-    db.planRounds.push(structuredClone(record))
-    db.plans.push(...structuredClone(plans))
-    trip.status = plans.length > 0 ? 'planned' : 'collecting'
-    return buildRound(tripId, round)
-  })
+export function conflictKind(error: unknown): 'old_round' | 'trip_closed' | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null
+  if (/rodada/i.test(error.message)) return 'old_round'
+  if (/fechou|fechada/i.test(error.message)) return 'trip_closed'
+  return null
 }
 
-/** GET /trips/{id}/plans?round=n */
-export function getPlans(tripId: string, round: number): Promise<PlanRound> {
-  return respond(() => buildRound(tripId, round))
-}
-
-/** POST /plans/{id}/reactions — cria ou substitui a reação do convidado ao plano. */
-export function createReaction(planId: string, input: CreateReactionInput): Promise<Reaction> {
-  return respond(() => {
-    const member = findMemberByToken(input.invite_token)
-    const plan = db.plans.find((item) => item.id === planId)
-    if (!plan || plan.trip_id !== member.trip_id) throw new ApiError(404, 'Plano não encontrado.')
-
-    const comment = input.comment?.trim() || null
-    if (input.verdict !== 'accepted' && (comment?.length ?? 0) < MIN_REACTION_COMMENT_LENGTH) {
-      throw new ApiError(
-        422,
-        input.verdict === 'rejected' ? 'Conte o motivo da recusa.' : 'Conte qual é a sua ressalva.',
-      )
-    }
-
-    const reaction: Reaction = {
-      id: nextId('react'),
-      plan_id: planId,
-      member_id: member.id,
-      verdict: input.verdict,
-      comment: input.verdict === 'accepted' ? null : comment,
-      reacted_at: now(),
-    }
-    db.reactions = db.reactions.filter((item) => !(item.plan_id === planId && item.member_id === member.id))
-    db.reactions.push(reaction)
-    return reaction
-  })
+/** Erro de acesso de quem organiza: falta o link de administração ou ele não vale para a viagem. */
+export function isAccessError(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 401 || error.status === 403)
 }
