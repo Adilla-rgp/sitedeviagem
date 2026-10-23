@@ -5,6 +5,7 @@ import { BrandMark } from '../../components/brand-mark'
 import { Button } from '../../components/button'
 import { buttonVariants } from '../../components/button-styles'
 import { JustificationPanel } from '../../components/plan/justification-panel'
+import { FinalPlanNotice } from '../../components/plan/final-plan-notice'
 import { PlanHeading } from '../../components/plan/plan-heading'
 import { ReactionForm } from '../../components/plan/reaction-form'
 import { SatisfactionPanel } from '../../components/plan/satisfaction-panel'
@@ -20,7 +21,7 @@ type PageState =
 
 async function loadPlan(token: string) {
   const invite = await getInvite(token)
-  const round = invite.latest_round === null ? null : await getPlans(invite.trip.id, invite.latest_round)
+  const round = invite.latest_round === null ? null : await getPlans(invite.trip.id, invite.latest_round, token)
   return { invite, round }
 }
 
@@ -62,7 +63,14 @@ export function PlanReactionPage() {
         {state.status === 'error' && (
           <PlanError error={state.error} onRetry={() => setAttempt((value) => value + 1)} />
         )}
-        {state.status === 'ready' && <PlanContent token={token} invite={state.invite} round={state.round} />}
+        {state.status === 'ready' && (
+          <PlanContent
+            token={token}
+            invite={state.invite}
+            round={state.round}
+            onTripClosed={() => setAttempt((value) => value + 1)}
+          />
+        )}
       </main>
     </div>
   )
@@ -72,9 +80,10 @@ interface PlanContentProps {
   token: string
   invite: Invite
   round: PlanRound | null
+  onTripClosed: () => void
 }
 
-function PlanContent({ token, invite, round }: PlanContentProps) {
+function PlanContent({ token, invite, round, onTripClosed }: PlanContentProps) {
   const { trip, member } = invite
   const context = round ? `${trip.title} · rodada ${round.round}` : trip.title
 
@@ -112,14 +121,16 @@ function PlanContent({ token, invite, round }: PlanContentProps) {
       </div>
     )
   }
-  // A API real devolve ao convidado só a própria reação; aqui filtramos do mesmo jeito.
+  // A API devolve ao convidado só a própria reação.
   const ownReaction = reactionOf(round.reactions, plan.id, member.id)
   const wasCounted = plan.per_member_scores.some((item) => item.member_id === member.id)
+  const isClosed = trip.status === 'agreed'
 
   return (
     <>
-      <PlanHeading plan={plan} destinations={invite.destinations} context={context} />
-      {!wasCounted && (
+      <PlanHeading plan={plan} destinations={invite.destinations} context={context} isFinal={isClosed} />
+      {isClosed && <FinalPlanNotice />}
+      {!wasCounted && !isClosed && (
         <p className="rounded border border-line-strong bg-surface px-3 py-2.5 text-[13px] leading-normal text-ink-soft">
           Este plano foi calculado sem as suas condições, porque você ainda não tinha respondido.{' '}
           <Link to={`/convite/${token}`} className="text-accent-soft underline underline-offset-2 hover:text-ink">
@@ -129,7 +140,17 @@ function PlanContent({ token, invite, round }: PlanContentProps) {
       )}
       <SatisfactionPanel plan={plan} members={invite.members} viewerId={member.id} />
       <JustificationPanel plan={plan} members={invite.members} />
-      <ReactionForm key={plan.id} token={token} planId={plan.id} initialReaction={ownReaction} />
+      <ReactionForm
+        key={plan.id}
+        token={token}
+        planId={plan.id}
+        initialReaction={ownReaction}
+        destinations={invite.destinations}
+        isClosed={isClosed}
+        latestRoundPath={`/convite/${token}/plano`}
+        respondPath={`/convite/${token}`}
+        onTripClosed={onTripClosed}
+      />
     </>
   )
 }

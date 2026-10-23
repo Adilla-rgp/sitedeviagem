@@ -7,8 +7,8 @@ import { getErrorMessage, parseConstraints, saveConstraints } from '../../lib/ap
 import { formatCount, formatDateRange } from '../../lib/format'
 import type { Constraints, ConstraintsInput, Invite, MemberLimit } from '../../types/api'
 import { AlertMessage } from '../../components/alert-message'
-import { ConstraintList } from './constraint-list'
-import { ConstraintNotes } from './constraint-notes'
+import { ConstraintList } from '../../components/constraints/constraint-list'
+import { ConstraintNotes } from '../../components/constraints/constraint-notes'
 import { InviteHeader, type RespondStep } from './invite-header'
 
 type FocusTarget = 'textarea' | 'interpretation' | 'sent'
@@ -60,6 +60,7 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
   const step: RespondStep = isSent ? 3 : interpretation ? 2 : 1
 
   const { trip, member, organizer_name, member_count, destinations } = invite
+  const isClosed = trip.status === 'agreed'
   const tripMeta = [
     formatCount(member_count, 'pessoa', 'pessoas'),
     formatCount(destinations.length, 'destino', 'destinos'),
@@ -236,8 +237,20 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
           </>
         )}
 
+        {isClosed && (
+          <p className="rounded border border-line-strong bg-surface px-3 py-2.5 text-[13px] leading-normal text-ink-soft">
+            A viagem fechou: todos que responderam aceitaram o plano final. As respostas não podem mais ser alteradas.
+          </p>
+        )}
+
         <div className="mt-auto flex flex-col gap-2.5">
-          {isSent ? (
+          {isClosed ? (
+            invite.latest_round !== null && (
+              <Link to={`/convite/${token}/plano`} className={buttonVariants({ size: 'lg', block: true, className: 'hover:bg-accent-soft' })}>
+                Ver o plano final
+              </Link>
+            )
+          ) : isSent ? (
             <>
               {invite.latest_round !== null && (
                 <Link to={`/convite/${token}/plano`} className={buttonVariants({ size: 'lg', block: true, className: 'hover:bg-accent-soft' })}>
