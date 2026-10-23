@@ -32,7 +32,7 @@ O site abre em modo demonstração, com a "Viagem de julho": 5 pessoas, 4 destin
 2. responder como Eva, em texto livre;
 3. voltar ao mapa e ver os conflitos aparecerem;
 4. gerar os planos e mexer no critério de equilíbrio (α);
-5. reagir ao plano como Eva e ver a reação na tela da organizadora.
+5. reagir ao plano como Eva e ver a reação na tela de quem organiza.
 
 ## Como funciona o motor
 
@@ -55,9 +55,12 @@ Com `α = 0`, vence a maior média do grupo; com `α = 1`, vence o plano em que 
 ## Stack e arquitetura
 
 - **Front-end (este repositório):** Vite, React 18, TypeScript (strict), Tailwind CSS com tokens próprios, React Router, `tailwind-variants`, `lucide-react` e Vitest.
-- **API (próxima fase, repositório separado):** FastAPI + Pydantic, com o motor como módulo Python, PostgreSQL (restrições em JSONB) e um LLM só na rota de interpretação do texto.
+- **API (repositório `planner-api`):** FastAPI + Pydantic, com o motor como módulo Python, PostgreSQL (restrições em JSONB) e a interpretação do texto atrás de uma interface, para o LLM entrar depois.
 
-**Hoje o front usa dados de exemplo.** Toda chamada passa por `src/lib/api.ts`, que tem uma função por rota do contrato e devolve dados de `src/mocks/` no formato exato da API, com um pequeno atraso simulado. Os dados ficam salvos no `localStorage` do navegador, para a demonstração funcionar entre abas e recargas. Quando a API existir, só `src/lib/api.ts` muda.
+**Dois modos.** Toda chamada passa por `src/lib/api.ts`, que tem uma função por rota da API:
+
+- **Com `VITE_API_URL`** (por exemplo, `http://localhost:8000`), o front chama a planner-api. Quem organiza cria a viagem em `/viagens/nova` e recebe um link de administração (`…/tensoes#admin=…`); o token fica guardado por viagem no `localStorage`, junto com os links de convite criados neste navegador (`src/lib/tokens.ts`). Quando falta o link de alguém, o front gera um novo pela rota de reemissão, e o anterior deixa de valer.
+- **Sem `VITE_API_URL`**, o site roda em modo demonstração: `src/mocks/api.ts` responde no mesmo formato e com as mesmas regras, com dados de exemplo salvos no `localStorage` e um pequeno atraso simulado.
 
 - `docs/especificacao.md`: especificação do produto, modelo de dados e contrato da API.
 - `docs/design/`: telas aprovadas (convidado, mapa de tensões, plano e concessões).
@@ -65,10 +68,10 @@ Com `α = 0`, vence a maior média do grupo; com `α = 1`, vence o plano em que 
 - `src/pages/`: uma pasta por tela.
 - `src/components/`: componentes compartilhados.
 - `src/lib/`: acesso à API, formatação e a simulação do critério de equilíbrio (`scoring.ts`).
-- `src/mocks/`: dados de exemplo e o cálculo do mapa de tensões, que vai para o back depois.
-- `src/config/`: nome do produto e modo demonstração.
+- `src/mocks/`: a API de demonstração e os dados de exemplo, com as saídas do motor e do mapa de tensões geradas pela planner-api.
+- `src/config/`: nome do produto, endereço da API e modo demonstração.
 
-O front não implementa o motor: planos e scores vêm prontos da API (hoje, dos mocks). O cálculo do mapa de tensões existe em `src/mocks/tensions.ts` só até a API assumir essa rota.
+O front não implementa o motor nem o mapa de tensões: tudo vem pronto da API (no modo demonstração, dos fixtures gerados por ela).
 
 ## Como rodar
 
@@ -79,7 +82,15 @@ npm install
 npm run dev
 ```
 
-Abra o endereço que o Vite mostrar (normalmente `http://localhost:5173`).
+Abra o endereço que o Vite mostrar (normalmente `http://localhost:5173`). Sem configuração, o site abre no modo demonstração.
+
+Para usar a API, suba a planner-api (`docker compose up --build` naquele repositório) e crie um `.env.local` a partir de `.env.example`:
+
+```bash
+VITE_API_URL=http://localhost:8000
+```
+
+A API precisa aceitar a origem do front em `CORS_ORIGINS` (o padrão já inclui `http://localhost:5173`).
 
 | Comando | O que faz |
 | --- | --- |
@@ -98,12 +109,13 @@ Para voltar os dados de exemplo ao início, use "Reiniciar demonstração" no to
 npm test
 ```
 
-Os testes cobrem a fórmula do score e a ordenação das alternativas (`src/lib/scoring.test.ts`), inclusive os casos-limite de α (0 e 1) e empates na pior satisfação.
+Os testes cobrem a fórmula do score e a ordenação das alternativas (`src/lib/scoring.test.ts`), as mensagens de erro da API (`src/lib/http.test.ts`), os tokens guardados (`src/lib/tokens.test.ts`), as regras da API de demonstração (`src/mocks/api.test.ts`) e a coerência dos fixtures com os dados de exemplo.
 
 ## Publicação
 
 O projeto está pronto para a Vercel:
 
+- Defina `VITE_API_URL` nas variáveis do projeto para o endereço público da API; sem ela, o site publicado fica no modo demonstração. A API precisa ter o domínio do front em `CORS_ORIGINS`.
 - `vercel.json` redireciona todas as rotas para o `index.html`, para que recarregar `/viagens/…` ou `/convite/…` funcione.
 - As tags Open Graph usam o domínio de produção que a Vercel informa no build (`VERCEL_PROJECT_PRODUCTION_URL`). Em outro provedor, defina `SITE_URL` (por exemplo, `SITE_URL=https://meu-dominio.com`).
 - A imagem de prévia fica em `public/og-image.png`, gerada a partir de `scripts/og-image.html`.

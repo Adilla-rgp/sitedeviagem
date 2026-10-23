@@ -22,15 +22,16 @@ O projeto nasceu do plann.er do NLW Journey (Rocketseat). A interface antiga já
 - React Router 6
 - `tailwind-variants` para variantes de componentes
 - `lucide-react` para ícones (traço, sem preenchimento)
-- Sem back-end por enquanto: todos os dados vêm de `src/lib/api.ts`, que hoje devolve dados de exemplo no **formato exato do contrato da API** descrito na especificação. Quando a API em FastAPI existir, só esse arquivo muda.
+- Back-end no repositório `planner-api` (FastAPI). Todos os dados vêm de `src/lib/api.ts`: com `VITE_API_URL` definida, ele chama a API; sem ela, usa a API de demonstração (`src/mocks/api.ts`), no **formato exato do contrato**.
 
 ## Regras de arquitetura
 
 - Componentes nunca contêm dados fixos de negócio: tudo passa por `src/lib/api.ts`.
 - Tipos do contrato em `src/types/api.ts`, espelhando os modelos da especificação.
 - Dados de exemplo em `src/mocks/`, coerentes entre si (mesmo grupo, mesmos números em todas as telas).
-- O front não implementa o motor: os planos e scores vêm prontos da API (hoje, de `src/mocks/fixtures/july-trip.json`, gerado pelo motor; veja `src/mocks/README.md`). A única pontuação no front é a simulação do critério de equilíbrio em `src/lib/scoring.ts`, que reordena as alternativas quando o organizador mexe no α; ela espelha a fórmula da especificação e não muda o plano recomendado.
-- Modo demonstração: enquanto os dados vêm dos mocks, `src/config/demo.ts` liga a faixa "Demonstração com dados de exemplo" em todas as telas e o roteiro da página inicial. Os atalhos e o reinício dos dados ficam em `src/lib/demo.ts`. Desligue quando a API real estiver no ar.
+- O front não implementa o motor nem o mapa de tensões: tudo vem pronto da API (no modo demonstração, de `src/mocks/fixtures/`, gerado pela planner-api; veja `src/mocks/README.md`). A única pontuação no front é a simulação do critério de equilíbrio em `src/lib/scoring.ts`, que reordena as alternativas quando o organizador mexe no α; ela espelha a fórmula da especificação e não muda o plano recomendado.
+- Modo demonstração: sem `VITE_API_URL`, `src/config/demo.ts` liga a faixa "Demonstração com dados de exemplo" em todas as telas e o roteiro da página inicial. Os atalhos e o reinício dos dados ficam em `src/lib/demo.ts`.
+- Tokens da API (administração e convites) ficam guardados por viagem no `localStorage` (`src/lib/tokens.ts`). O de administração chega pelo `#admin=` do link e sai da barra de endereço.
 - Os dados de exemplo ficam salvos no `localStorage` (`src/mocks/store.ts`). Ao mudar o formato dos dados, suba a versão da chave de armazenamento.
 - O orçamento de cada pessoa é confidencial: nenhuma tela ou justificativa mostra o valor para o grupo.
 - Estrutura de pastas: `src/pages/` (uma pasta por tela), `src/components/` (compartilhados), `src/lib/`, `src/types/`, `src/mocks/`, `src/config/`.
