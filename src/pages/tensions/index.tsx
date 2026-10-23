@@ -1,9 +1,11 @@
 import { LoaderCircle } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { AccessError } from '../../components/access-error'
 import { Button } from '../../components/button'
 import { TripHeader } from '../../components/trip-header'
-import { ApiError, getTrip, getTripTensions } from '../../lib/api'
+import { ApiError, getTrip, getTripTensions, isAccessError } from '../../lib/api'
+import { takeAdminTokenFromHash } from '../../lib/tokens'
 import { formatCount, formatDateRange } from '../../lib/format'
 import { useDocumentTitle } from '../../lib/use-document-title'
 import type { TripDetail, TripTensions } from '../../types/api'
@@ -24,7 +26,10 @@ export function TensionsPage() {
 
   useDocumentTitle('Mapa de tensões')
 
-  const fetchData = useCallback(() => Promise.all([getTrip(id), getTripTensions(id)]), [id])
+  const fetchData = useCallback(() => {
+    takeAdminTokenFromHash(id)
+    return Promise.all([getTrip(id), getTripTensions(id)])
+  }, [id])
 
   useEffect(() => {
     let active = true
@@ -130,6 +135,7 @@ interface TensionsErrorProps {
 
 function TensionsError({ error, onRetry }: TensionsErrorProps) {
   const notFound = error instanceof ApiError && error.status === 404
+  if (isAccessError(error)) return <AccessError message={(error as ApiError).message} />
 
   return (
     <div role="alert" className="flex flex-col gap-3">

@@ -43,9 +43,10 @@ export function ViabilityPanel({ tensions, destinations }: ViabilityPanelProps) 
         Viabilidade por destino
       </h2>
       <ul className="flex flex-col gap-3.5">
-        {tensions.viability.map((item) => {
-          const destination = destinations.find((candidate) => candidate.id === item.destination_id)
-          if (!destination) return null
+        {/* Na ordem da viagem: a API devolve a viabilidade ordenada pelo id do destino. */}
+        {destinations.map((destination) => {
+          const item = tensions.viability.find((candidate) => candidate.destination_id === destination.id)
+          if (!item) return null
           const share = item.responded_count > 0 ? item.accepted_count / item.responded_count : 0
           return (
             <li key={item.destination_id} className="flex flex-col gap-1.5">

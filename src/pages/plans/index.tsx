@@ -2,13 +2,16 @@ import { LoaderCircle } from 'lucide-react'
 import { useCallback, useEffect, useId, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { AlertMessage } from '../../components/alert-message'
+import { AccessError } from '../../components/access-error'
 import { Button } from '../../components/button'
+import { FinalPlanNotice } from '../../components/plan/final-plan-notice'
 import { JustificationPanel } from '../../components/plan/justification-panel'
 import { PlanHeading } from '../../components/plan/plan-heading'
 import { ReactionForm } from '../../components/plan/reaction-form'
 import { SatisfactionPanel } from '../../components/plan/satisfaction-panel'
 import { TripHeader } from '../../components/trip-header'
-import { ApiError, getPlans, getTrip } from '../../lib/api'
+import { ApiError, getErrorMessage, getPlans, getTrip, isAccessError, reissueInvite } from '../../lib/api'
+import { takeAdminTokenFromHash } from '../../lib/tokens'
 import { reactionOf } from '../../lib/plans'
 import { useDocumentTitle } from '../../lib/use-document-title'
 import { useGeneratePlans } from '../../lib/use-generate-plans'
@@ -26,6 +29,7 @@ type PageState =
   | { status: 'ready'; trip: TripDetail; round: PlanRound | null }
 
 async function loadPlans(tripId: string) {
+  takeAdminTokenFromHash(tripId)
   const trip = await getTrip(tripId)
   const round = trip.latest_round === null ? null : await getPlans(tripId, trip.latest_round)
   return { trip, round }
@@ -72,7 +76,7 @@ export function PlansPage() {
     }
   }, [fetchData, attempt])
 
-  // A reação da organizadora entra na lista sem recarregar a página.
+  // A reação de quem organiza entra na lista sem recarregar a página.
   function handleReactionSaved(reaction: Reaction) {
     setState((current) => {
       if (current.status !== 'ready' || !current.round) return current
@@ -96,10 +100,11 @@ export function PlansPage() {
           />
         ) : state.round ? (
           <PlansContent
-            key={state.round.round}
+            key={`${state.round.round}:${state.trip.status}`}
             trip={state.trip}
             round={state.round}
             onReactionSaved={handleReactionSaved}
+            onTripClosed={() => setAttempt((value) => value + 1)}
           />
         ) : (
           <NoPlans trip={state.trip} onGenerated={(round) => setState({ status: 'ready', trip: state.trip, round })} />
@@ -124,12 +129,15 @@ interface PlansContentProps {
   trip: TripDetail
   round: PlanRound
   onReactionSaved: (reaction: Reaction) => void
+  onTripClosed: () => void
 }
 
-function PlansContent({ trip, round, onReactionSaved }: PlansContentProps) {
+function PlansContent({ trip, round, onReactionSaved, onTripClosed }: PlansContentProps) {
   const recommended = round.plans.find((plan) => plan.id === round.recommended_plan_id) ?? round.plans[0]
   const [alpha, setAlpha] = useState(recommended.alpha)
   const organizer = trip.members.find((member) => member.is_organizer)
+  const [organizerToken, setOrganizerToken] = useState(organizer?.invite_token ?? null)
+  const isClosed = trip.status === 'agreed'
 
   return (
     <main className="mx-auto flex max-w-[1280px] flex-wrap items-start gap-6 px-4 pb-10 pt-7 sm:px-8">
@@ -138,18 +146,28 @@ function PlansContent({ trip, round, onReactionSaved }: PlansContentProps) {
           plan={recommended}
           destinations={trip.destinations}
           context={`Viagens / ${trip.title} / Rodada ${round.round}`}
+          isFinal={isClosed}
         />
+        {isClosed && <FinalPlanNotice />}
         <SatisfactionPanel plan={recommended} members={trip.members} />
         <JustificationPanel plan={recommended} members={trip.members} />
-        {organizer && (
-          <ReactionForm
-            key={recommended.id}
-            token={organizer.invite_token}
-            planId={recommended.id}
-            initialReaction={reactionOf(round.reactions, recommended.id, organizer.id)}
-            onSaved={onReactionSaved}
-          />
-        )}
+        {organizer &&
+          (organizerToken ? (
+            <ReactionForm
+              key={recommended.id}
+              token={organizerToken}
+              planId={recommended.id}
+              initialReaction={reactionOf(round.reactions, recommended.id, organizer.id)}
+              destinations={trip.destinations}
+              isClosed={isClosed}
+              latestRoundPath={`/viagens/${trip.id}/planos`}
+              respondPath={`/convite/${organizerToken}`}
+              onSaved={onReactionSaved}
+              onTripClosed={onTripClosed}
+            />
+          ) : (
+            !isClosed && <OrganizerInvite tripId={trip.id} memberId={organizer.id} onToken={setOrganizerToken} />
+          ))}
         <ReactionsPanel round={round} members={trip.members} />
       </div>
 
@@ -164,6 +182,51 @@ function PlansContent({ trip, round, onReactionSaved }: PlansContentProps) {
         <ExcludedPanel round={round} destinations={trip.destinations} members={trip.members} />
       </aside>
     </main>
+  )
+}
+
+interface OrganizerInviteProps {
+  tripId: string
+  memberId: string
+  onToken: (token: string) => void
+}
+
+/** Quem organiza reage pelo próprio convite; sem ele guardado aqui, gera um novo. */
+function OrganizerInvite({ tripId, memberId, onToken }: OrganizerInviteProps) {
+  const [isWorking, setIsWorking] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleReissue() {
+    setIsWorking(true)
+    setError(null)
+    try {
+      const member = await reissueInvite(tripId, memberId)
+      if (member.invite_token) onToken(member.invite_token)
+    } catch (caught) {
+      setError(getErrorMessage(caught, 'Não foi possível gerar o link. Tente novamente.'))
+    } finally {
+      setIsWorking(false)
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="organizer-invite-heading"
+      className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-4 sm:p-5"
+    >
+      <h2 id="organizer-invite-heading" className="text-base font-semibold">
+        Sua reação
+      </h2>
+      <p className="text-sm leading-normal text-ink-soft">
+        Você reage pelo seu link de convite, e ele não está guardado neste navegador. Gere um novo para reagir daqui; o
+        link anterior deixa de valer.
+      </p>
+      {error && <AlertMessage>{error}</AlertMessage>}
+      <Button variant="secondary" className="self-start" disabled={isWorking} onClick={handleReissue}>
+        {isWorking && <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+        {isWorking ? 'Gerando…' : 'Gerar meu link e reagir'}
+      </Button>
+    </section>
   )
 }
 
@@ -216,6 +279,7 @@ interface PlansErrorProps {
 
 function PlansError({ error, onRetry }: PlansErrorProps) {
   const notFound = error instanceof ApiError && error.status === 404
+  if (isAccessError(error)) return <AccessError message={(error as ApiError).message} />
 
   return (
     <div role="alert" className="flex flex-col gap-3">

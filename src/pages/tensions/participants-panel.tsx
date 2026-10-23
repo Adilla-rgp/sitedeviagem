@@ -1,5 +1,6 @@
 import { CopyButton } from '../../components/copy-button'
-import { inviteUrl } from '../../lib/links'
+import { formatList } from '../../lib/format'
+import { inviteLinks, missingLinks } from '../../lib/invites'
 import type { TripDetail } from '../../types/api'
 
 interface ParticipantsPanelProps {
@@ -8,9 +9,12 @@ interface ParticipantsPanelProps {
 }
 
 export function ParticipantsPanel({ trip, respondedCount }: ParticipantsPanelProps) {
+  const missing = missingLinks(trip.id, trip.members)
+
   // Cada participante tem um link próprio: copiamos todos, um por linha.
-  function buildLinksText() {
-    const lines = trip.members.map((member) => `${member.display_name}: ${inviteUrl(member.invite_token)}`)
+  async function buildLinksText() {
+    const links = await inviteLinks(trip.id, trip.members)
+    const lines = trip.members.map((member) => `${member.display_name}: ${links.get(member.id) ?? ''}`)
     return [`${trip.title}: links de convite (cada pessoa tem o próprio link)`, ...lines].join('\n')
   }
 
@@ -37,11 +41,20 @@ export function ParticipantsPanel({ trip, respondedCount }: ParticipantsPanelPro
           </li>
         ))}
       </ul>
-      <div className="mt-2.5">
+      <div className="mt-2.5 flex flex-col gap-2">
+        {missing.length > 0 && (
+          <p className="text-xs leading-normal text-ink-muted">
+            {missing.length === 1
+              ? `O link de ${missing[0].display_name} não está guardado neste navegador.`
+              : `Os links de ${formatList(missing.map((member) => member.display_name))} não estão guardados neste navegador.`}{' '}
+            Ao copiar, um link novo é gerado e o anterior deixa de valer.
+          </p>
+        )}
         <CopyButton
-          label="Copiar links dos convites"
+          label={missing.length > 0 ? 'Gerar os links que faltam e copiar' : 'Copiar links dos convites'}
           getText={buildLinksText}
           successMessage="Links copiados. Envie a cada pessoa o link com o nome dela."
+          errorMessage="Não foi possível gerar os links. Tente novamente."
         />
       </div>
     </section>
