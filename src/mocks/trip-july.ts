@@ -10,7 +10,7 @@ export const TRIP_ID = 'trip-julho'
 export const trip: Trip = {
   id: TRIP_ID,
   title: 'Viagem de julho',
-  organizer_id: 'user-ana',
+  organizer_id: 'mem-ana',
   date_window_start: '2027-07-05',
   date_window_end: '2027-07-26',
   nights: 6,

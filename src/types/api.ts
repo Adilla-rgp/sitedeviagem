@@ -1,6 +1,7 @@
-// Tipos do contrato da API (docs/especificacao.md). Campos em snake_case, como
-// a API em FastAPI/Pydantic vai serializar. Datas sem hora em ISO (AAAA-MM-DD),
-// instantes em ISO 8601 completo.
+// Tipos do contrato da API (docs/especificacao.md e planner-api). Campos em
+// snake_case, como a API em FastAPI/Pydantic serializa. Datas sem hora em ISO
+// (AAAA-MM-DD), instantes em ISO 8601 completo. A ordem das listas de tensões
+// (viability, key_constraints) não segue a da viagem: as telas não dependem dela.
 
 export type IsoDate = string
 export type IsoDateTime = string
@@ -30,12 +31,17 @@ export interface Destination {
 
 // Viagem e participantes
 
+/**
+ * agreed: todos que responderam aceitaram o plano recomendado da rodada mais
+ * recente. Depois disso, respostas, reações e novas rodadas voltam 409.
+ */
 export type TripStatus = 'collecting' | 'planned' | 'agreed'
 
 export interface Trip {
   id: string
   title: string
-  organizer_id: string
+  /** Sem conta de organizador no MVP: o id do participante que organiza. */
+  organizer_id: string | null
   date_window_start: IsoDate
   date_window_end: IsoDate
   /** Duração do roteiro padrão; o motor também testa um roteiro curto, com 2 noites a menos. */
@@ -49,7 +55,11 @@ export interface Member {
   id: string
   trip_id: string
   display_name: string
-  invite_token: string
+  /**
+   * Só vem na resposta que cria o convite ou gera um novo (o banco guarda o
+   * hash). O front completa com os tokens guardados neste navegador (src/lib/tokens.ts).
+   */
+  invite_token: string | null
   is_organizer: boolean
   responded_at: IsoDateTime | null
 }
@@ -65,9 +75,19 @@ export interface TripDetail extends Trip {
   latest_round: number | null
 }
 
+/** Resposta de POST /trips. Os tokens só aparecem aqui. */
+export interface TripCreated extends TripDetail {
+  /** Vai no cabeçalho X-Admin-Token das rotas de quem organiza. */
+  admin_token: string
+  /** Link de administração: o token vai depois do #admin=, que o navegador não envia a servidores. */
+  admin_url: string
+}
+
 /** POST /trips */
 export interface CreateTripInput {
   title: string
+  /** Nome de quem organiza; vira o primeiro participante, com is_organizer. */
+  organizer_name: string
   destination_ids: string[]
   date_window_start: IsoDate
   date_window_end: IsoDate
@@ -104,7 +124,7 @@ export type SoftConstraint =
   | (ConstraintItemBase & { kind: 'prefer_destination'; destination_ids: string[]; weight: number })
   | (ConstraintItemBase & { kind: 'prefer_tags'; tags: string[]; weight: number })
 
-/** Corpo de PUT /invite/{token}/constraints. */
+/** Corpo de PUT /invite/{token}/constraints. A API preenche o summary que vier vazio. */
 export interface ConstraintsInput {
   raw_text: string
   hard: HardConstraint[]
@@ -279,10 +299,7 @@ export interface PlanRound extends PlanRoundRecord {
   plans: Plan[]
   /** Nulo quando a rodada não tem planos. */
   recommended_plan_id: string | null
-  /**
-   * Reações aos planos da rodada. O organizador recebe todas; na API real, o
-   * convidado recebe só a própria.
-   */
+  /** Reações aos planos da rodada. Quem organiza recebe todas; o convidado, só a própria. */
   reactions: Reaction[]
 }
 
@@ -302,10 +319,40 @@ export interface Reaction {
 /**
  * POST /plans/{id}/reactions. O convidado se identifica pelo token do convite.
  * Reagir de novo ao mesmo plano substitui a reação anterior. O comentário é
- * obrigatório em "aceito com ressalva" e "recuso".
+ * obrigatório em "aceito com ressalva" e "recuso". Só vale para a rodada mais
+ * recente (409 numa anterior) e com a viagem aberta (409 depois do acordo).
  */
 export interface CreateReactionInput {
   invite_token: string
   verdict: Verdict
   comment?: string | null
+}
+
+/**
+ * O que o motivo da recusa pede, interpretado e ainda não salvo. Só para quem
+ * recusou, que confirma (com ou sem itens removidos) em POST /plans/{id}/reactions/constraints.
+ */
+export interface ConstraintDraft {
+  hard: HardConstraint[]
+  soft: SoftConstraint[]
+  member_limits: MemberLimit[]
+}
+
+/** Resposta de POST /plans/{id}/reactions. */
+export interface ReactionResult extends Reaction {
+  /** Só na recusa. Listas vazias quando o motivo não traz limite nem preferência reconhecível. */
+  constraint_draft: ConstraintDraft | null
+  /** Status da viagem depois da reação: "agreed" quando esta reação fechou a viagem. */
+  trip_status: TripStatus
+}
+
+/**
+ * POST /plans/{id}/reactions/constraints. Grava uma nova versão das restrições
+ * de quem recusou, que entra na próxima rodada: limites novos se somam e uma
+ * preferência nova substitui a do mesmo tipo. Cada recusa é confirmada uma vez.
+ */
+export interface ConfirmRejectionInput {
+  invite_token: string
+  hard: HardConstraint[]
+  soft: SoftConstraint[]
 }
