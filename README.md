@@ -1,12 +1,12 @@
 # [NOME]
 
-[![CI](https://github.com/Adilla-rgp/sitedeviagem/actions/workflows/ci.yml/badge.svg)](https://github.com/Adilla-rgp/sitedeviagem/actions/workflows/ci.yml)
+[![CI](https://github.com/Adilla-rgp/meridiano/actions/workflows/ci.yml/badge.svg)](https://github.com/Adilla-rgp/meridiano/actions/workflows/ci.yml)
 
 > Nome provisório. O nome do produto ainda não foi definido e fica num único lugar: `src/config/brand.ts`.
 
 Planejador de viagens em grupo: cada pessoa informa seus limites e preferências, um motor determinístico calcula o plano mais justo e explica quem cedeu o quê.
 
-Este repositório é o front-end. O motor e a API ficam em [Adilla-rgp/planner-api](https://github.com/Adilla-rgp/planner-api) (Python, FastAPI e PostgreSQL). Projeto de portfólio.
+Este repositório é o front-end. O motor e a API ficam em [Adilla-rgp/meridiano-api](https://github.com/Adilla-rgp/meridiano-api) (Python, FastAPI e PostgreSQL). Projeto de portfólio.
 
 ## O problema
 
@@ -63,7 +63,7 @@ Com `α = 0`, vence a maior média do grupo; com `α = 1`, vence o plano em que 
 ## Stack e arquitetura
 
 - **Front-end (este repositório):** Vite, React 18, TypeScript (strict), Tailwind CSS com tokens próprios, React Router, `tailwind-variants`, `lucide-react` e Vitest.
-- **API ([planner-api](https://github.com/Adilla-rgp/planner-api)):** FastAPI + Pydantic, com o motor como módulo Python puro, PostgreSQL (restrições em JSONB) e a interpretação do texto atrás de uma interface (regras por padrão; LLM opcional). A API informa em `constraint_parser` qual interpretação usa: com `llm`, as telas avisam que o texto passa por um serviço de IA externo.
+- **API ([meridiano-api](https://github.com/Adilla-rgp/meridiano-api)):** FastAPI + Pydantic, com o motor como módulo Python puro, PostgreSQL (restrições em JSONB) e a interpretação do texto atrás de uma interface (regras por padrão; LLM opcional). A API informa em `constraint_parser` qual interpretação usa: com `llm`, as telas avisam que o texto passa por um serviço de IA externo.
 
 **Dois modos.** Toda chamada passa por `src/lib/api.ts`, que tem uma função por rota da API:
 
@@ -92,7 +92,7 @@ npm run dev
 
 Abra o endereço que o Vite mostrar (normalmente `http://localhost:5173`). Sem configuração, o site abre no modo demonstração.
 
-Para o modo completo, suba a [planner-api](https://github.com/Adilla-rgp/planner-api) (`docker compose up --build` naquele repositório) e crie um `.env.local` a partir de `.env.example`:
+Para o modo completo, suba a [meridiano-api](https://github.com/Adilla-rgp/meridiano-api) (`docker compose up --build` naquele repositório) e crie um `.env.local` a partir de `.env.example`:
 
 ```bash
 VITE_API_URL=http://localhost:8000
