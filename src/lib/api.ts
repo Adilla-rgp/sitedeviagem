@@ -23,7 +23,7 @@ import { getAdminToken, getInviteToken, saveAdminToken, saveInviteTokens } from 
 export { ApiError, getErrorMessage } from './http'
 
 // Única porta de entrada de dados do front. Cada função espelha uma rota da
-// planner-api. Com VITE_API_URL definida, chama a API; sem ela, responde com a
+// meridiano-api. Com VITE_API_URL definida, chama a API; sem ela, responde com a
 // API de demonstração (src/mocks/api.ts), no mesmo formato e com os mesmos erros.
 
 export interface Api {

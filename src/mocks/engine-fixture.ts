@@ -11,7 +11,7 @@ import type {
 } from '../types/api'
 import fixtureJson from './fixtures/july-trip.json'
 
-// Saída do motor (planner-api) para a Viagem de julho, gerada por
+// Saída do motor (meridiano-api) para a Viagem de julho, gerada por
 // scripts/export_fixture.py e copiada para fixtures/. O front não calcula o
 // motor: os planos, scores e destinos excluídos vêm daqui. Para gerar de novo,
 // veja o README desta pasta.

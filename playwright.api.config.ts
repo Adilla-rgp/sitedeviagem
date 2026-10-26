@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// Ponta a ponta contra a planner-api rodando localmente (docker compose up
+// Ponta a ponta contra a meridiano-api rodando localmente (docker compose up
 // naquele repositório). Roda à mão: npm run test:e2e:api. O front sobe na porta
 // 5173, a origem que a API aceita por padrão em CORS_ORIGINS.
 

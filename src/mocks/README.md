@@ -1,6 +1,6 @@
 # Dados de exemplo
 
-Sem `VITE_API_URL`, o site roda no modo demonstração: `src/lib/api.ts` usa `api.ts` desta pasta, que responde como a planner-api (mesmo formato, mesmas regras e mensagens) sobre os dados daqui. Todos são da mesma viagem, a "Viagem de julho".
+Sem `VITE_API_URL`, o site roda no modo demonstração: `src/lib/api.ts` usa `api.ts` desta pasta, que responde como a meridiano-api (mesmo formato, mesmas regras e mensagens) sobre os dados daqui. Todos são da mesma viagem, a "Viagem de julho".
 
 | Arquivo | O que tem |
 | --- | --- |
@@ -16,7 +16,7 @@ Sem `VITE_API_URL`, o site roda no modo demonstração: `src/lib/api.ts` usa `ap
 
 ## Planos vêm do motor
 
-O front não calcula o motor. Os planos, scores, justificativas, destinos excluídos e limites que bloqueiam vêm de `fixtures/july-trip.json`, gerado pelo motor no repositório `planner-api`. Nenhum número de plano é escrito à mão.
+O front não calcula o motor. Os planos, scores, justificativas, destinos excluídos e limites que bloqueiam vêm de `fixtures/july-trip.json`, gerado pelo motor no repositório `meridiano-api`. Nenhum número de plano é escrito à mão.
 
 Quando alguém gera planos, o mock procura a rodada do fixture calculada com exatamente as respostas salvas:
 
@@ -31,19 +31,19 @@ Para qualquer outra combinação, a geração de planos e o mapa de tensões avi
 
 ## Mapa de tensões vem do motor
 
-O front também não calcula o mapa de tensões. `fixtures/july-tensions.json` tem, para cada rodada acima, o mapa no formato de `GET /trips/{id}/tensions`, com os ids da demonstração. Ele é gerado junto com `july-trip.json` pelo `scripts/export_fixture.py` da planner-api (seção abaixo). O teste `tensions-fixture.test.ts` confere que ele usa o mesmo grupo dos mocks e do fixture do motor.
+O front também não calcula o mapa de tensões. `fixtures/july-tensions.json` tem, para cada rodada acima, o mapa no formato de `GET /trips/{id}/tensions`, com os ids da demonstração. Ele é gerado junto com `july-trip.json` pelo `scripts/export_fixture.py` da meridiano-api (seção abaixo). O teste `tensions-fixture.test.ts` confere que ele usa o mesmo grupo dos mocks e do fixture do motor.
 
 ## Gerar o fixture de novo
 
 Depois de mudar o motor, ou os dados de entrada aqui (catálogo, restrições, interpretações de exemplo):
 
-1. Atualize os mesmos dados em `planner-api/tests/fixtures.py`.
-2. No `planner-api`, rode:
+1. Atualize os mesmos dados em `meridiano-api/tests/fixtures.py`.
+2. No `meridiano-api`, rode:
 
    ```sh
-   .venv/Scripts/python -m scripts.export_fixture --out ../planner-vite/src/mocks/fixtures/july-trip.json
+   .venv/Scripts/python -m scripts.export_fixture --out ../meridiano/src/mocks/fixtures/july-trip.json
    ```
 
-   (no Linux ou macOS, `.venv/bin/python`). O script grava também `july-tensions.json` na mesma pasta. Sem rodar o script, copie os dois arquivos de `planner-api/fixtures/`.
+   (no Linux ou macOS, `.venv/bin/python`). O script grava também `july-tensions.json` na mesma pasta. Sem rodar o script, copie os dois arquivos de `meridiano-api/fixtures/`.
 3. Rode `npm test`. O teste `engine-fixture.test.ts` falha se o catálogo, a viagem ou as restrições daqui forem diferentes dos que o motor usou.
 4. Se o formato dos dados mudou, suba a versão de `STORAGE_KEY` em `store.ts`.
