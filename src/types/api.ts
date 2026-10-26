@@ -32,6 +32,12 @@ export interface Destination {
 // Viagem e participantes
 
 /**
+ * Como a API interpreta o texto livre (CONSTRAINT_PARSER da planner-api). Com
+ * llm, o texto passa por um serviço de IA externo, e as telas avisam isso.
+ */
+export type ConstraintParserKind = 'rules' | 'llm'
+
+/**
  * agreed: todos que responderam aceitaram o plano recomendado da rodada mais
  * recente. Depois disso, respostas, reações e novas rodadas voltam 409.
  */
@@ -73,6 +79,8 @@ export interface TripDetail extends Trip {
   members: Member[]
   /** Rodada de planos mais recente; nulo se o motor ainda não rodou. */
   latest_round: number | null
+  /** Ausente equivale a rules: sem aviso de IA. */
+  constraint_parser?: ConstraintParserKind
 }
 
 /** Resposta de POST /trips. Os tokens só aparecem aqui. */
@@ -171,6 +179,8 @@ export interface Invite {
   member_limits: MemberLimit[]
   /** Rodada de planos mais recente; nulo se o motor ainda não rodou. */
   latest_round: number | null
+  /** Ausente equivale a rules: sem aviso de IA. */
+  constraint_parser?: ConstraintParserKind
 }
 
 // Tensões
