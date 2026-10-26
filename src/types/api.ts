@@ -115,6 +115,8 @@ export type HardConstraint =
   | (ConstraintItemBase & { kind: 'budget'; max_per_person: number; all_inclusive: boolean })
   | (ConstraintItemBase & { kind: 'exclude_climate'; climates: Climate[] })
   | (ConstraintItemBase & { kind: 'exclude_destination'; destination_ids: string[] })
+  /** "Não quero praia": elimina todo destino que tenha pelo menos uma das tags. */
+  | (ConstraintItemBase & { kind: 'exclude_tags'; tags: string[] })
 
 /** Preferências: entram no cálculo de satisfação com um peso de 0 a 1. */
 export type SoftConstraint =

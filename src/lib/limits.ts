@@ -23,6 +23,8 @@ export function limitSubject(ref: LimitRef, members: GroupMember[]): LimitSubjec
       return { text: `o limite de clima de ${name}`, plural: false }
     case 'exclude_destination':
       return { text: `o veto de ${name}`, plural: false }
+    case 'exclude_tags':
+      return { text: `o limite de tipo de destino de ${name}`, plural: false }
   }
 }
 
@@ -57,6 +59,7 @@ const SUGGESTION: Record<LimitKind, (nights: number) => string> = {
   budget: () => 'Incluir destinos mais baratos ou reduzir as noites da viagem.',
   exclude_climate: () => 'Incluir um destino de outro clima.',
   exclude_destination: () => 'Incluir outro destino candidato.',
+  exclude_tags: () => 'Incluir um destino sem os tipos vetados.',
 }
 
 /** Sugestões para destravar a rodada, na ordem dos limites que mais bloqueiam. */
