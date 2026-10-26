@@ -8,7 +8,8 @@ Planejador de viagens em grupo: cada participante informa limites e preferência
 
 - Especificação completa: `docs/especificacao.md`. Leia antes de qualquer tarefa nova.
 - Referência visual aprovada: `docs/design/` (veja abaixo).
-- Nome do produto ainda não definido: use `[NOME]` na interface e mantenha isso num único lugar (`src/config/brand.ts`). O `index.html` recebe o nome no build, por `vite.config.ts`.
+- Nome do produto: Meridiano. Na interface ele vem sempre de `src/config/brand.ts`, nunca escrito direto num componente. O `index.html` recebe o nome no build, por `vite.config.ts`.
+- Repositórios: este front é `Adilla-rgp/meridiano`; a API é `Adilla-rgp/meridiano-api`.
 
 ## Origem do repositório
 
@@ -22,14 +23,14 @@ O projeto nasceu do plann.er do NLW Journey (Rocketseat). A interface antiga já
 - React Router 6
 - `tailwind-variants` para variantes de componentes
 - `lucide-react` para ícones (traço, sem preenchimento)
-- Back-end no repositório `planner-api` (FastAPI). Todos os dados vêm de `src/lib/api.ts`: com `VITE_API_URL` definida, ele chama a API; sem ela, usa a API de demonstração (`src/mocks/api.ts`), no **formato exato do contrato**.
+- Back-end no repositório `meridiano-api` (FastAPI). Todos os dados vêm de `src/lib/api.ts`: com `VITE_API_URL` definida, ele chama a API; sem ela, usa a API de demonstração (`src/mocks/api.ts`), no **formato exato do contrato**.
 
 ## Regras de arquitetura
 
 - Componentes nunca contêm dados fixos de negócio: tudo passa por `src/lib/api.ts`.
 - Tipos do contrato em `src/types/api.ts`, espelhando os modelos da especificação.
 - Dados de exemplo em `src/mocks/`, coerentes entre si (mesmo grupo, mesmos números em todas as telas).
-- O front não implementa o motor nem o mapa de tensões: tudo vem pronto da API (no modo demonstração, de `src/mocks/fixtures/`, gerado pela planner-api; veja `src/mocks/README.md`). A única pontuação no front é a simulação do critério de equilíbrio em `src/lib/scoring.ts`, que reordena as alternativas quando o organizador mexe no α; ela espelha a fórmula da especificação e não muda o plano recomendado.
+- O front não implementa o motor nem o mapa de tensões: tudo vem pronto da API (no modo demonstração, de `src/mocks/fixtures/`, gerado pela meridiano-api; veja `src/mocks/README.md`). A única pontuação no front é a simulação do critério de equilíbrio em `src/lib/scoring.ts`, que reordena as alternativas quando o organizador mexe no α; ela espelha a fórmula da especificação e não muda o plano recomendado.
 - Modo demonstração: sem `VITE_API_URL`, `src/config/demo.ts` liga a faixa "Demonstração com dados de exemplo" em todas as telas e o roteiro da página inicial. Os atalhos e o reinício dos dados ficam em `src/lib/demo.ts`.
 - Tokens da API (administração e convites) ficam guardados por viagem no `localStorage` (`src/lib/tokens.ts`). O de administração chega pelo `#admin=` do link e sai da barra de endereço.
 - Os dados de exemplo ficam salvos no `localStorage` (`src/mocks/store.ts`). Ao mudar o formato dos dados, suba a versão da chave de armazenamento.

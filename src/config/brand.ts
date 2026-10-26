@@ -1,4 +1,4 @@
-// Nome do produto ainda não definido. Este é o único lugar onde ele aparece.
+// Nome do produto. Este é o único lugar onde ele aparece no código.
 export const brand = {
-  name: '[NOME]',
+  name: 'Meridiano',
 } as const

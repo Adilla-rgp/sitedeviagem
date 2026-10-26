@@ -1,4 +1,4 @@
-// Tipos do contrato da API (docs/especificacao.md e planner-api). Campos em
+// Tipos do contrato da API (docs/especificacao.md e meridiano-api). Campos em
 // snake_case, como a API em FastAPI/Pydantic serializa. Datas sem hora em ISO
 // (AAAA-MM-DD), instantes em ISO 8601 completo. A ordem das listas de tensões
 // (viability, key_constraints) não segue a da viagem: as telas não dependem dela.
@@ -32,7 +32,7 @@ export interface Destination {
 // Viagem e participantes
 
 /**
- * Como a API interpreta o texto livre (CONSTRAINT_PARSER da planner-api). Com
+ * Como a API interpreta o texto livre (CONSTRAINT_PARSER da meridiano-api). Com
  * llm, o texto passa por um serviço de IA externo, e as telas avisam isso.
  */
 export type ConstraintParserKind = 'rules' | 'llm'

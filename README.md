@@ -1,12 +1,10 @@
-# [NOME]
+# Meridiano
 
-[![CI](https://github.com/Adilla-rgp/sitedeviagem/actions/workflows/ci.yml/badge.svg)](https://github.com/Adilla-rgp/sitedeviagem/actions/workflows/ci.yml)
-
-> Nome provisório. O nome do produto ainda não foi definido e fica num único lugar: `src/config/brand.ts`.
+[![CI](https://github.com/Adilla-rgp/meridiano/actions/workflows/ci.yml/badge.svg)](https://github.com/Adilla-rgp/meridiano/actions/workflows/ci.yml)
 
 Planejador de viagens em grupo: cada pessoa informa seus limites e preferências, um motor determinístico calcula o plano mais justo e explica quem cedeu o quê.
 
-Este repositório é o front-end. O motor e a API ficam em [Adilla-rgp/planner-api](https://github.com/Adilla-rgp/planner-api) (Python, FastAPI e PostgreSQL). Projeto de portfólio.
+Este repositório é o front-end. O motor e a API ficam em [Adilla-rgp/meridiano-api](https://github.com/Adilla-rgp/meridiano-api) (Python, FastAPI e PostgreSQL). Projeto de portfólio.
 
 ## O problema
 
@@ -30,7 +28,7 @@ _GIF ou vídeo da demonstração em breve._
 <!-- Substituir pelo endereço publicado. -->
 Site: _em breve_.
 
-**O site publicado é uma demonstração, sem API.** Ele roda só no navegador, com a "Viagem de julho": 5 pessoas, 4 destinos e 3 respostas. Os planos, scores, justificativas e o mapa de tensões que ele mostra não foram escritos à mão: foram calculados pelo motor real da planner-api para cada etapa da demonstração e exportados para `src/mocks/fixtures/`. O que muda na demonstração é só a entrada: a interpretação do texto livre devolve uma resposta de exemplo por pessoa, e as respostas ficam salvas no `localStorage` do navegador.
+**O site publicado é uma demonstração, sem API.** Ele roda só no navegador, com a "Viagem de julho": 5 pessoas, 4 destinos e 3 respostas. Os planos, scores, justificativas e o mapa de tensões que ele mostra não foram escritos à mão: foram calculados pelo motor real da meridiano-api para cada etapa da demonstração e exportados para `src/mocks/fixtures/`. O que muda na demonstração é só a entrada: a interpretação do texto livre devolve uma resposta de exemplo por pessoa, e as respostas ficam salvas no `localStorage` do navegador.
 
 **O modo completo roda localmente com a API:** criar viagens, convidar pessoas, interpretar qualquer texto, gerar rodadas pelo motor e fechar a viagem (veja [Como rodar](#como-rodar)).
 
@@ -63,11 +61,11 @@ Com `α = 0`, vence a maior média do grupo; com `α = 1`, vence o plano em que 
 ## Stack e arquitetura
 
 - **Front-end (este repositório):** Vite, React 18, TypeScript (strict), Tailwind CSS com tokens próprios, React Router, `tailwind-variants`, `lucide-react` e Vitest.
-- **API ([planner-api](https://github.com/Adilla-rgp/planner-api)):** FastAPI + Pydantic, com o motor como módulo Python puro, PostgreSQL (restrições em JSONB) e a interpretação do texto atrás de uma interface (regras por padrão; LLM opcional). A API informa em `constraint_parser` qual interpretação usa: com `llm`, as telas avisam que o texto passa por um serviço de IA externo.
+- **API ([meridiano-api](https://github.com/Adilla-rgp/meridiano-api)):** FastAPI + Pydantic, com o motor como módulo Python puro, PostgreSQL (restrições em JSONB) e a interpretação do texto atrás de uma interface (regras por padrão; LLM opcional). A API informa em `constraint_parser` qual interpretação usa: com `llm`, as telas avisam que o texto passa por um serviço de IA externo.
 
 **Dois modos.** Toda chamada passa por `src/lib/api.ts`, que tem uma função por rota da API:
 
-- **Com `VITE_API_URL`** (por exemplo, `http://localhost:8000`), o front chama a planner-api. Quem organiza cria a viagem em `/viagens/nova` e recebe um link de administração (`…/tensoes#admin=…`); o token fica guardado por viagem no `localStorage`, junto com os links de convite criados neste navegador (`src/lib/tokens.ts`). Quando falta o link de alguém, o front gera um novo pela rota de reemissão, e o anterior deixa de valer.
+- **Com `VITE_API_URL`** (por exemplo, `http://localhost:8000`), o front chama a meridiano-api. Quem organiza cria a viagem em `/viagens/nova` e recebe um link de administração (`…/tensoes#admin=…`); o token fica guardado por viagem no `localStorage`, junto com os links de convite criados neste navegador (`src/lib/tokens.ts`). Quando falta o link de alguém, o front gera um novo pela rota de reemissão, e o anterior deixa de valer.
 - **Sem `VITE_API_URL`**, o site roda em modo demonstração: `src/mocks/api.ts` responde no mesmo formato e com as mesmas regras, com dados de exemplo salvos no `localStorage` e um pequeno atraso simulado.
 
 - `docs/especificacao.md`: especificação do produto, modelo de dados e contrato da API.
@@ -76,7 +74,7 @@ Com `α = 0`, vence a maior média do grupo; com `α = 1`, vence o plano em que 
 - `src/pages/`: uma pasta por tela.
 - `src/components/`: componentes compartilhados.
 - `src/lib/`: acesso à API, formatação e a simulação do critério de equilíbrio (`scoring.ts`).
-- `src/mocks/`: a API de demonstração e os dados de exemplo, com as saídas do motor e do mapa de tensões geradas pela planner-api.
+- `src/mocks/`: a API de demonstração e os dados de exemplo, com as saídas do motor e do mapa de tensões geradas pela meridiano-api.
 - `src/config/`: nome do produto, endereço da API e modo demonstração.
 
 O front não implementa o motor nem o mapa de tensões: tudo vem pronto da API (no modo demonstração, dos fixtures gerados por ela).
@@ -92,7 +90,7 @@ npm run dev
 
 Abra o endereço que o Vite mostrar (normalmente `http://localhost:5173`). Sem configuração, o site abre no modo demonstração.
 
-Para o modo completo, suba a [planner-api](https://github.com/Adilla-rgp/planner-api) (`docker compose up --build` naquele repositório) e crie um `.env.local` a partir de `.env.example`:
+Para o modo completo, suba a [meridiano-api](https://github.com/Adilla-rgp/meridiano-api) (`docker compose up --build` naquele repositório) e crie um `.env.local` a partir de `.env.example`:
 
 ```bash
 VITE_API_URL=http://localhost:8000
@@ -140,7 +138,7 @@ Gera o build de produção sem `VITE_API_URL`, como o site publicado, mesmo que 
 **Contra a API local** (`e2e/api.e2e.ts`, configuração em `playwright.api.config.ts`). Roda à mão:
 
 ```bash
-# no repositório planner-api
+# no repositório meridiano-api
 docker compose up --build
 
 # neste repositório

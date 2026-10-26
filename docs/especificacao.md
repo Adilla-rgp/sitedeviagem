@@ -57,7 +57,7 @@ score(p) = (1 − α) · média(s_i(p)) + α · min(s_i(p))
 
 ### Decisões do motor (21/10/2026)
 
-A implementação de referência fica no repositório `planner-api`, no pacote `engine/`, com as regras completas em `docs/motor.md`. Os testes de lá cobrem cada regra abaixo.
+A implementação de referência fica no repositório `meridiano-api`, no pacote `engine/`, com as regras completas em `docs/motor.md`. Os testes de lá cobrem cada regra abaixo.
 
 **Duração.** O organizador fixa a duração ao criar a viagem (`trips.nights`, padrão 6). Para cada destino, o motor testa o roteiro padrão e um "roteiro curto" com 2 noites a menos (no mínimo 2 noites). O dia da volta é o dia da ida mais `nights`.
 

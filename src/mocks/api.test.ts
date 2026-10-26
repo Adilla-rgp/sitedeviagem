@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Api } from '../lib/api'
 
-// A API de demonstração segue as regras da planner-api: reação só na rodada
+// A API de demonstração segue as regras da meridiano-api: reação só na rodada
 // mais recente, viagem fechada quando todos aceitam e recusa confirmada como
 // nova versão das restrições.
 

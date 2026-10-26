@@ -2,7 +2,7 @@ import type { Browser, Page } from '@playwright/test'
 import { API_URL } from '../playwright.api.config'
 import { expect, planTitle, respond, test, trackErrors } from './fixtures'
 
-// Ciclo completo contra a planner-api local: criar a viagem, convidar,
+// Ciclo completo contra a meridiano-api local: criar a viagem, convidar,
 // responder, gerar planos, recusar e confirmar o motivo, nova rodada, reação
 // numa rodada antiga e todos aceitando até a viagem fechar. Cada pessoa usa um
 // contexto próprio do navegador, como uma janela anônima.
