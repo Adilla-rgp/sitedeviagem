@@ -7,6 +7,7 @@ import { getErrorMessage, parseConstraints, saveConstraints } from '../../lib/ap
 import { formatCount, formatDateRange } from '../../lib/format'
 import type { Constraints, ConstraintsInput, Invite, MemberLimit } from '../../types/api'
 import { AlertMessage } from '../../components/alert-message'
+import { AiNotice } from '../../components/constraints/ai-notice'
 import { ConstraintList } from '../../components/constraints/constraint-list'
 import { ConstraintNotes } from '../../components/constraints/constraint-notes'
 import { InviteHeader, type RespondStep } from './invite-header'
@@ -40,6 +41,7 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
   const textareaId = useId()
   const hintId = useId()
   const parseErrorId = useId()
+  const aiNoticeId = useId()
 
   // Move o foco depois que a nova etapa já está na tela.
   useEffect(() => {
@@ -61,6 +63,8 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
 
   const { trip, member, organizer_name, member_count, destinations } = invite
   const isClosed = trip.status === 'agreed'
+  const usesAi = invite.constraint_parser === 'llm'
+  const describedBy = [hintId, usesAi && aiNoticeId, parseError && parseErrorId].filter(Boolean).join(' ')
   const tripMeta = [
     formatCount(member_count, 'pessoa', 'pessoas'),
     formatCount(destinations.length, 'destino', 'destinos'),
@@ -175,6 +179,7 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
               <p id={hintId} className="text-[13px] text-ink-muted">
                 Escreva livremente. Nós organizamos sua resposta em limites e preferências.
               </p>
+              {usesAi && <AiNotice id={aiNoticeId} />}
               <textarea
                 id={textareaId}
                 ref={textareaRef}
@@ -185,7 +190,7 @@ export function RespondFlow({ token, invite }: RespondFlowProps) {
                   if (parseError) setParseError(null)
                 }}
                 placeholder="Ex.: Posso de 10 a 20 de julho. No máximo uns 1.100 conto com tudo. Não curto frio."
-                aria-describedby={parseError ? `${hintId} ${parseErrorId}` : hintId}
+                aria-describedby={describedBy}
                 aria-invalid={parseError ? true : undefined}
                 className="w-full resize-none rounded border border-line-strong bg-surface p-3 text-[15px] leading-[1.45] text-ink placeholder:text-ink-muted focus-visible:border-accent"
               />

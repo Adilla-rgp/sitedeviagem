@@ -1,8 +1,12 @@
 # [NOME]
 
+[![CI](https://github.com/Adilla-rgp/sitedeviagem/actions/workflows/ci.yml/badge.svg)](https://github.com/Adilla-rgp/sitedeviagem/actions/workflows/ci.yml)
+
 > Nome provisório. O nome do produto ainda não foi definido e fica num único lugar: `src/config/brand.ts`.
 
 Planejador de viagens em grupo: cada pessoa informa seus limites e preferências, um motor determinístico calcula o plano mais justo e explica quem cedeu o quê.
+
+Este repositório é o front-end. O motor e a API ficam em [Adilla-rgp/planner-api](https://github.com/Adilla-rgp/planner-api) (Python, FastAPI e PostgreSQL). Projeto de portfólio.
 
 ## O problema
 
@@ -15,7 +19,7 @@ Decisão justa e explicada, não votação:
 - **Limites nunca são violados.** "No máximo R$ 1.100" ou "nada de frio" eliminam alternativas antes de qualquer cálculo.
 - **O critério de equilíbrio protege quem sairia pior**, em vez de olhar só para a média do grupo.
 - **Cada concessão vem com o motivo**, por pessoa: quem ganhou, quem cedeu e por quê.
-- **A IA só entra na entrada:** transforma texto livre ("não curto frio, no máximo uns 1.100 conto") em restrições estruturadas que a pessoa confirma. A decisão e a explicação são determinísticas: as mesmas respostas geram sempre o mesmo plano.
+- **O texto livre só vira sugestão:** "não curto frio, no máximo uns 1.100 conto" é interpretado em restrições estruturadas, que a pessoa confirma antes de salvar. A interpretação fica atrás de uma interface na API: por regras (o padrão) ou por um LLM, medidos no mesmo conjunto de casos. A decisão e a explicação são determinísticas: as mesmas respostas geram sempre o mesmo plano.
 - **O orçamento de cada pessoa é confidencial:** entra no cálculo, mas nunca aparece para o grupo.
 
 ## Demonstração
@@ -26,7 +30,11 @@ _GIF ou vídeo da demonstração em breve._
 <!-- Substituir pelo endereço publicado. -->
 Site: _em breve_.
 
-O site abre em modo demonstração, com a "Viagem de julho": 5 pessoas, 4 destinos e 3 respostas. A página inicial traz um roteiro de cinco passos:
+**O site publicado é uma demonstração, sem API.** Ele roda só no navegador, com a "Viagem de julho": 5 pessoas, 4 destinos e 3 respostas. Os planos, scores, justificativas e o mapa de tensões que ele mostra não foram escritos à mão: foram calculados pelo motor real da planner-api para cada etapa da demonstração e exportados para `src/mocks/fixtures/`. O que muda na demonstração é só a entrada: a interpretação do texto livre devolve uma resposta de exemplo por pessoa, e as respostas ficam salvas no `localStorage` do navegador.
+
+**O modo completo roda localmente com a API:** criar viagens, convidar pessoas, interpretar qualquer texto, gerar rodadas pelo motor e fechar a viagem (veja [Como rodar](#como-rodar)).
+
+A página inicial da demonstração traz um roteiro de cinco passos:
 
 1. ver o mapa de tensões com 3 respostas;
 2. responder como Eva, em texto livre;
@@ -36,7 +44,7 @@ O site abre em modo demonstração, com a "Viagem de julho": 5 pessoas, 4 destin
 
 ## Como funciona o motor
 
-1. **Interpretar a entrada (IA):** texto livre vira restrições em JSON, que a pessoa confirma.
+1. **Interpretar a entrada:** texto livre vira restrições em JSON, que a pessoa confirma.
 2. **Normalizar:** limites (orçamento máximo, datas possíveis, climas ou destinos vetados) e preferências com peso (ritmo, clima, destinos preferidos).
 3. **Gerar candidatos:** destino × intervalo de datas dentro da janela da viagem.
 4. **Filtrar:** descarta todo candidato que viola algum limite.
@@ -55,7 +63,7 @@ Com `α = 0`, vence a maior média do grupo; com `α = 1`, vence o plano em que 
 ## Stack e arquitetura
 
 - **Front-end (este repositório):** Vite, React 18, TypeScript (strict), Tailwind CSS com tokens próprios, React Router, `tailwind-variants`, `lucide-react` e Vitest.
-- **API (repositório `planner-api`):** FastAPI + Pydantic, com o motor como módulo Python, PostgreSQL (restrições em JSONB) e a interpretação do texto atrás de uma interface, para o LLM entrar depois.
+- **API ([planner-api](https://github.com/Adilla-rgp/planner-api)):** FastAPI + Pydantic, com o motor como módulo Python puro, PostgreSQL (restrições em JSONB) e a interpretação do texto atrás de uma interface (regras por padrão; LLM opcional). A API informa em `constraint_parser` qual interpretação usa: com `llm`, as telas avisam que o texto passa por um serviço de IA externo.
 
 **Dois modos.** Toda chamada passa por `src/lib/api.ts`, que tem uma função por rota da API:
 
@@ -84,7 +92,7 @@ npm run dev
 
 Abra o endereço que o Vite mostrar (normalmente `http://localhost:5173`). Sem configuração, o site abre no modo demonstração.
 
-Para usar a API, suba a planner-api (`docker compose up --build` naquele repositório) e crie um `.env.local` a partir de `.env.example`:
+Para o modo completo, suba a [planner-api](https://github.com/Adilla-rgp/planner-api) (`docker compose up --build` naquele repositório) e crie um `.env.local` a partir de `.env.example`:
 
 ```bash
 VITE_API_URL=http://localhost:8000
@@ -100,6 +108,8 @@ A API precisa aceitar a origem do front em `CORS_ORIGINS` (o padrão já inclui 
 | `npm run typecheck` | checagem de tipos |
 | `npm run lint` | ESLint |
 | `npm test` | testes unitários (Vitest) |
+| `npm run test:e2e` | ponta a ponta no modo demonstração (Playwright) |
+| `npm run test:e2e:api` | ponta a ponta contra a API local (Playwright) |
 
 Para voltar os dados de exemplo ao início, use "Reiniciar demonstração" no topo de qualquer tela ou abra qualquer página com `?reset-mocks` no endereço.
 
@@ -111,11 +121,43 @@ npm test
 
 Os testes cobrem a fórmula do score e a ordenação das alternativas (`src/lib/scoring.test.ts`), as mensagens de erro da API (`src/lib/http.test.ts`), os tokens guardados (`src/lib/tokens.test.ts`), as regras da API de demonstração (`src/mocks/api.test.ts`) e a coerência dos fixtures com os dados de exemplo.
 
+### Ponta a ponta (Playwright)
+
+Os testes ficam em `e2e/` e falham se aparecer qualquer erro de JavaScript ou do console. Antes da primeira vez, instale o navegador:
+
+```bash
+npx playwright install chromium
+```
+
+**Contra os dados de exemplo** (`e2e/demo.e2e.ts`, configuração em `playwright.config.ts`). É o que roda no CI:
+
+```bash
+npm run test:e2e
+```
+
+Gera o build de produção sem `VITE_API_URL`, como o site publicado, mesmo que exista um `.env.local`, e o serve na porta 4173. Percorre o roteiro da demonstração: a página inicial, Eva respondendo no celular (360 px, sem aviso de IA), o conflito no mapa, os planos, a reação de Eva chegando a quem organiza e a rodada sem plano viável depois da resposta de Diego.
+
+**Contra a API local** (`e2e/api.e2e.ts`, configuração em `playwright.api.config.ts`). Roda à mão:
+
+```bash
+# no repositório planner-api
+docker compose up --build
+
+# neste repositório
+npm run test:e2e:api
+```
+
+Sobe o front na porta 5173 apontado para `http://localhost:8000` (outro endereço: `E2E_API_URL`). Se a API não responder, o teste para logo, com a instrução. A porta 5173 precisa estar livre, porque é a origem que a API aceita por padrão. O teste faz o ciclo completo, com cada pessoa num navegador separado: criar a viagem, convidar, responder, abrir o link de administração em outro navegador, gerar a rodada 1, recusar e confirmar o motivo, gerar a rodada 2, reagir numa rodada antiga e todos aceitarem até a viagem fechar. Cada execução cria uma viagem nova no banco local.
+
+### CI
+
+O GitHub Actions (`.github/workflows/ci.yml`) roda, em todo push e pull request, `typecheck`, `lint`, os testes unitários, o build e os testes de ponta a ponta contra os dados de exemplo. Quando algo falha, o relatório do Playwright fica nos artefatos da execução.
+
 ## Publicação
 
 O projeto está pronto para a Vercel:
 
-- Defina `VITE_API_URL` nas variáveis do projeto para o endereço público da API; sem ela, o site publicado fica no modo demonstração. A API precisa ter o domínio do front em `CORS_ORIGINS`.
+- O site publicado fica no modo demonstração: não defina `VITE_API_URL` nas variáveis do projeto. Para publicar com uma API, defina `VITE_API_URL` com o endereço público dela, que precisa ter o domínio do front em `CORS_ORIGINS`.
 - `vercel.json` redireciona todas as rotas para o `index.html`, para que recarregar `/viagens/…` ou `/convite/…` funcione.
 - As tags Open Graph usam o domínio de produção que a Vercel informa no build (`VERCEL_PROJECT_PRODUCTION_URL`). Em outro provedor, defina `SITE_URL` (por exemplo, `SITE_URL=https://meu-dominio.com`).
 - A imagem de prévia fica em `public/og-image.png`, gerada a partir de `scripts/og-image.html`.

@@ -160,6 +160,7 @@ function PlansContent({ trip, round, onReactionSaved, onTripClosed }: PlansConte
               initialReaction={reactionOf(round.reactions, recommended.id, organizer.id)}
               destinations={trip.destinations}
               isClosed={isClosed}
+              usesAi={trip.constraint_parser === 'llm'}
               latestRoundPath={`/viagens/${trip.id}/planos`}
               respondPath={`/convite/${organizerToken}`}
               onSaved={onReactionSaved}

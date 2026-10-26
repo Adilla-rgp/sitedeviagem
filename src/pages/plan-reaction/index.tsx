@@ -147,6 +147,7 @@ function PlanContent({ token, invite, round, onTripClosed }: PlanContentProps) {
         initialReaction={ownReaction}
         destinations={invite.destinations}
         isClosed={isClosed}
+        usesAi={invite.constraint_parser === 'llm'}
         latestRoundPath={`/convite/${token}/plano`}
         respondPath={`/convite/${token}`}
         onTripClosed={onTripClosed}

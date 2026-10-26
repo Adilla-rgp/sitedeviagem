@@ -2,7 +2,7 @@ import type { TripTensions } from '../types/api'
 import tensionsJson from './fixtures/july-tensions.json'
 
 // Mapa de tensões que o motor calcula para cada etapa da demonstração, exportado
-// da API por scripts/export-tensions.mjs (veja o README desta pasta). As etapas
+// pelo scripts/export_fixture.py da planner-api (veja o README desta pasta). As etapas
 // têm os mesmos nomes das rodadas de fixtures/july-trip.json.
 
 interface TensionsFixture {

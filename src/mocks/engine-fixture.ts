@@ -67,6 +67,8 @@ function canonical(item: EngineItem<HardConstraint> | EngineItem<SoftConstraint>
       return JSON.stringify({ ...item, climates: sorted(item.climates) })
     case 'exclude_destination':
       return JSON.stringify({ ...item, destination_ids: sorted(item.destination_ids) })
+    case 'exclude_tags':
+      return JSON.stringify({ ...item, tags: sorted(item.tags) })
     default:
       return JSON.stringify(item, Object.keys(item).sort())
   }

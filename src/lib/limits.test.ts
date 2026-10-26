@@ -19,6 +19,15 @@ describe('limitSubject', () => {
       plural: true,
     })
   })
+
+  it('nomeia o limite de tipo de destino', () => {
+    expect(limitSubject({ member_id: 'mem-carla', kind: 'exclude_tags' }, members).text).toBe(
+      'o limite de tipo de destino de Carla',
+    )
+    expect(unblockSuggestions([{ member_id: 'mem-carla', kind: 'exclude_tags', eliminated_candidates: 3 }], 6)).toEqual([
+      'Incluir um destino sem os tipos vetados.',
+    ])
+  })
 })
 
 describe('exclusionReason', () => {

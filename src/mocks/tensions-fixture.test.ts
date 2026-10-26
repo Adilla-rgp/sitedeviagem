@@ -3,7 +3,7 @@ import { engineFixture } from './engine-fixture'
 import { tensionsFixture } from './tensions-fixture'
 import { members, TRIP_ID, tripDestinationIds } from './trip-july'
 
-// O mapa de tensões da demonstração vem da API (scripts/export-tensions.mjs).
+// O mapa de tensões da demonstração vem do motor (scripts/export_fixture.py da planner-api).
 // Estes testes conferem que ele usa o mesmo grupo dos mocks e do fixture do motor.
 
 const memberIds = members.map((member) => member.id)

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { AlertMessage } from '../alert-message'
 import { Button } from '../button'
 import { buttonVariants } from '../button-styles'
+import { AiNotice } from '../constraints/ai-notice'
 import { ConstraintList } from '../constraints/constraint-list'
 import { ConstraintNotes } from '../constraints/constraint-notes'
 import { confirmRejection, conflictKind, createReaction, getErrorMessage } from '../../lib/api'
@@ -50,6 +51,8 @@ interface ReactionFormProps {
   destinations: Destination[]
   /** Viagem fechada: mostra a reação e desabilita as ações. */
   isClosed: boolean
+  /** A API interpreta o motivo da recusa com um LLM: a tela avisa antes do envio. */
+  usesAi?: boolean
   /** Onde ver a rodada mais recente, se esta ficar antiga enquanto a tela está aberta. */
   latestRoundPath: string
   /** Onde alterar a resposta (as condições), pelo convite. */
@@ -65,6 +68,7 @@ export function ReactionForm({
   initialReaction,
   destinations,
   isClosed,
+  usesAi = false,
   latestRoundPath,
   respondPath,
   onSaved,
@@ -89,6 +93,7 @@ export function ReactionForm({
   const commentId = useId()
   const hintId = useId()
   const errorId = useId()
+  const aiNoticeId = useId()
 
   // Move o foco depois que a nova etapa já está na tela.
   useEffect(() => {
@@ -294,6 +299,8 @@ export function ReactionForm({
   }
 
   const prompt = pendingVerdict ? COMMENT_PROMPT[pendingVerdict] : null
+  // Só o motivo da recusa é interpretado; a ressalva vai como texto para o grupo.
+  const showAiNotice = usesAi && pendingVerdict === 'rejected'
 
   return (
     <section aria-labelledby="reaction-heading" className="flex flex-col gap-3">
@@ -314,6 +321,7 @@ export function ReactionForm({
           <p id={hintId} className="text-[13px] text-ink-muted">
             {prompt.hint}
           </p>
+          {showAiNotice && <AiNotice id={aiNoticeId} />}
           <textarea
             id={commentId}
             ref={commentRef}
@@ -323,7 +331,7 @@ export function ReactionForm({
               setComment(event.target.value)
               if (error) setError(null)
             }}
-            aria-describedby={error ? `${hintId} ${errorId}` : hintId}
+            aria-describedby={[hintId, showAiNotice && aiNoticeId, error && errorId].filter(Boolean).join(' ')}
             aria-invalid={error ? true : undefined}
             className="w-full resize-none rounded border border-line-strong bg-surface p-3 text-[15px] leading-[1.45] text-ink placeholder:text-ink-muted focus-visible:border-accent"
           />

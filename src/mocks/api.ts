@@ -105,6 +105,7 @@ function tripDetail(tripId: string): TripDetail {
     destinations: tripDestinations(tripId),
     members: tripMembers(tripId),
     latest_round: latestRound(tripId),
+    constraint_parser: 'rules',
   }
 }
 
@@ -241,6 +242,7 @@ export const mockApi: Api = {
         constraints,
         member_limits: constraints ? ownLimits(constraints.hard) : [],
         latest_round: latestRound(trip.id),
+        constraint_parser: 'rules',
       }
     }),
 
